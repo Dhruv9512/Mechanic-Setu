@@ -10,35 +10,41 @@ RUN apt-get update && apt-get install -y \
     tini \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Set the working directory
 WORKDIR /app
 
-# Copy environment.yml and create Conda environment
+# Copy environment.yml into the container
 COPY environment.yml /app/
+
+# Create the Conda environment from the environment.yml file
 RUN conda env create -f /app/environment.yml
 
-# Set PATH to activate Conda environment
+# Set environment variables to activate the Conda environment
 ENV PATH /opt/conda/envs/myenv/bin:$PATH
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Ensure Conda is initialized in non-interactive shells
+# Ensure Conda is properly initialized in non-interactive shells
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
 
-# Use Bash shell for subsequent commands
-SHELL ["/bin/bash", "-c"]
+# Activate Conda in the image
+SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 
-# Copy application code
+# Remove pip requirements copy and installation
+# COPY requirements.txt /app/
+# RUN pip install --upgrade pip && pip install -r /app/requirements.txt
+
+# Copy the application code
 COPY . /app/
 
-# Copy and set permissions for entrypoint script (no Conda needed here)
+# Ensure entrypoint script is copied and executable
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Expose Django port
+# Expose the port Django runs on
 EXPOSE 8000
 
-# Use tini as entrypoint for proper signal handling
+# Use tini as the entrypoint for better process management
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# Run your entrypoint script (Django server / Daphne)
+# Run Gunicorn and Celery via the entrypoint script
 CMD ["/app/entrypoint.sh"]
