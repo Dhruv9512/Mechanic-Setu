@@ -24,13 +24,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Ensure Conda is initialized in non-interactive shells
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
 
-# Use Conda shell for following commands
-SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
+# Use Bash shell for subsequent commands
+SHELL ["/bin/bash", "-c"]
 
 # Copy application code
 COPY . /app/
 
-# Copy and set permissions for entrypoint script
+# Copy and set permissions for entrypoint script (no Conda needed here)
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
@@ -40,5 +40,5 @@ EXPOSE 8000
 # Use tini as entrypoint for proper signal handling
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# Run your entrypoint script (Gunicorn/Celery etc.)
+# Run your entrypoint script (Django server / Daphne)
 CMD ["/app/entrypoint.sh"]
