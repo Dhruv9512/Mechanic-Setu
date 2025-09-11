@@ -1,0 +1,44 @@
+# Use Miniconda as the base image
+FROM continuumio/miniconda3
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libmariadb-dev \
+    libmariadb-dev-compat \
+    build-essential \
+    tini \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy environment.yml and create Conda environment
+COPY environment.yml /app/
+RUN conda env create -f /app/environment.yml
+
+# Set PATH to activate Conda environment
+ENV PATH /opt/conda/envs/myenv/bin:$PATH
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Ensure Conda is initialized in non-interactive shells
+RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
+
+# Use Conda shell for following commands
+SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
+
+# Copy application code
+COPY . /app/
+
+# Copy and set permissions for entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Expose Django port
+EXPOSE 8000
+
+# Use tini as entrypoint for proper signal handling
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# Run your entrypoint script (Gunicorn/Celery etc.)
+CMD ["/app/entrypoint.sh"]
