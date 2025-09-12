@@ -21,6 +21,14 @@ conda run --no-capture-output -n myenv python manage.py migrate --noinput
 echo "Collecting static files..."
 conda run --no-capture-output -n myenv python manage.py collectstatic --noinput
 
+# ✅ Start Celery worker (background process)
+echo "Starting Celery worker..."
+conda run --no-capture-output -n myenv celery -A MechanicSetu worker --loglevel=info &
+
+# ✅ Start Celery beat (optional - scheduler for periodic tasks)
+echo "Starting Celery beat..."
+conda run --no-capture-output -n myenv celery -A MechanicSetu beat --loglevel=info &
+
 # ✅ Start Daphne (ASGI Server) on port 8000 for both HTTP + WebSocket
 echo "Starting Daphne (ASGI - WebSocket + HTTP)..."
-conda run --no-capture-output -n myenv daphne -b 0.0.0.0 -p 8000 MechanicSetu.asgi:application
+exec conda run --no-capture-output -n myenv daphne -b 0.0.0.0 -p 8000 MechanicSetu.asgi:application

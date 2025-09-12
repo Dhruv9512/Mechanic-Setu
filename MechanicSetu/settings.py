@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import ssl
 import os
 import dj_database_url
 from datetime import timedelta
@@ -30,7 +31,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["mechanic-setu.onrender.com","mechanicsetu.netlify.app","localhost", "172.20.10.4"]
 
 
 # Application definition
@@ -74,6 +75,24 @@ DATABASES = {
     )
 }
 
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
+
+
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_EAGER_PROPAGATES = True
+
+# Use SSL properly in production
+CELERY_BROKER_USE_SSL = {
+    'ssl_cert_reqs': ssl.CERT_REQUIRED if not DEBUG else None
+}
 
 # ----------------------
 # EMAIL CONFIGURATION
@@ -176,13 +195,13 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # ----------------------
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://172.20.10.4:5173,http://localhost:5173",
+    default="https://mechanicsetu.netlify.app,https://mechanic-setu.onrender.com,http://172.20.10.4:5173,http://localhost:5173",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="http://172.20.10.4:5173,http://localhost:5173",
+    default="https://mechanicsetu.netlify.app,http://172.20.10.4:5173,http://localhost:5173",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 
@@ -242,3 +261,16 @@ REST_FRAMEWORK = {
 
 
 JET_DEFAULT_THEME = 'green'
+
+
+
+VERCEL_BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "my_cache_table",
+        "TIMEOUT": 300,
+        "OPTIONS": {"MAX_ENTRIES": 1000},
+    }
+}

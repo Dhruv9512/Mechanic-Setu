@@ -22,4 +22,5 @@ urlpatterns = [
     path('jet/', include('jet.urls', 'jet')), 
     path("admin/", admin.site.urls),
     path("api/users/", include("users.urls")),
+    path("api/core/", include("core.urls")),
 ]
