@@ -23,11 +23,11 @@ conda run --no-capture-output -n myenv python manage.py collectstatic --noinput
 
 # ✅ Start Daphne (ASGI Server) on port 8000 for both HTTP + WebSocket
 echo "Starting Daphne (ASGI - WebSocket + HTTP)..."
-conda run --no-capture-output -n myenv daphne -b 0.0.0.0 -p 8000 Pixel.asgi:application &
+conda run --no-capture-output -n myenv daphne -b 0.0.0.0 -p 8000 MechanicSetu.asgi:application &
 
 # ✅ Start Celery Worker
 echo "Starting Celery worker..."
-exec conda run --no-capture-output -n myenv celery -A Pixel worker \
+exec conda run --no-capture-output -n myenv celery -A MechanicSetu worker \
   --loglevel=info \
   --pool=solo \
   --max-tasks-per-child=5 \

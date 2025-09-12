@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = ["mechanic-setu.onrender.com","mechanicsetu.netlify.app","localhost", "172.20.10.4"]
+ALLOWED_HOSTS = ["mechanic-setu.onrender.com","mechanicsetu.netlify.app","localhost", "172.20.10.4","127.0.0.1"]
 
 
 # Application definition
@@ -39,6 +39,7 @@ ALLOWED_HOSTS = ["mechanic-setu.onrender.com","mechanicsetu.netlify.app","localh
 INSTALLED_APPS = [
     'jet',
     "users",
+    "core",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -274,3 +275,10 @@ CACHES = {
         "OPTIONS": {"MAX_ENTRIES": 1000},
     }
 }
+
+
+AUTH_USER_MODEL = "users.CustomUser"
+AUTHENTICATION_BACKENDS = [
+    "users.backends.EmailBackend",   # custom: email-only for OTP
+    "django.contrib.auth.backends.ModelBackend",  # default: email+password for admin/superuser
+]

@@ -26,24 +26,24 @@ class OtpVerificationView(APIView):
 
         cache_key = f"otp_{email}"
         cached_otp = cache.get(cache_key)
-        if cached_otp is None:
+        if cached_otp is None or cached_otp != otp:
             return Response({"error": "Invalid email or OTP."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if not cached_otp == otp:
-            return Response({"error": "Invalid email or OTP."}, status=status.HTTP_401_UNAUTHORIZED)
-
-        # OTP is valid, activate the user
-        user = User.objects.filter(email=email).first()
+        from .models import CustomUser
+        user = CustomUser.objects.filter(email=email).first()
         if user is None:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-    
-        # ✅ JWT Token generation
+        
+        user.is_active = True
+        user.save()
+
+        # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
-        # ✅ Return fast response
-        response =Response({
-            "message": "Login successful!",
-            "satus": "true",
+
+        # ✅ Return response with cookies
+        response = Response({
+            "message": "OTP verified successfully."
         }, status=status.HTTP_200_OK)
 
         response.set_cookie(
@@ -52,7 +52,7 @@ class OtpVerificationView(APIView):
             httponly=True,
             secure=True,
             samesite="None",
-            max_age=15*60  # 15 minutes
+            max_age=30*60
         )
         response.set_cookie(
             key="refresh",
@@ -60,41 +60,49 @@ class OtpVerificationView(APIView):
             httponly=True,
             secure=True,
             samesite="None",
-            max_age=7*24*60*60  # 7 days
+            max_age=7*24*60*60
         )
-
-        return Response({"message": "OTP verified successfully."}, status=status.HTTP_200_OK)
+        return response
 
 
 # Manual Login View
-class LoginView(APIView):
+class Login_SignUpView(APIView):
     permission_classes = [AllowAny] 
+
     def post(self, request):
-        
-        # Get email
         email = request.data.get('email')
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Here, you would typically authenticate the user
-        user=authenticate(request, email=email)
+        # Authenticate user using custom backend
+        from django.contrib.auth import authenticate
+        user = authenticate(request, email=email)
+
         if user is None:
-            return Response({"error": "Invalid email"}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        if not user.is_active:
-            return Response({"error": "You are not verified yet. Please check your email or try later."}, status=status.HTTP_403_FORBIDDEN)
+            # Create a new user
+            from .models import CustomUser
+            user = CustomUser.objects.create_user(email=email)
+            user.is_active = False
+            user.save()
+            status_message = "New User"
+        else:
+            if not user.is_active:
+                return Response({"error": "You are not verified yet."}, status=status.HTTP_403_FORBIDDEN)
+            status_message = "Existing User"
 
+        # Generate OTP and cache it
         cache_key = f"otp_{email}"
-        otp=generate_otp()
+        otp = generate_otp()
         cache.set(cache_key, otp, timeout=300)
 
-        user_data = {}
+        # Send OTP asynchronously
+        user_data = {"otp": otp, "email": email, "status": status_message}
         try:
-            
-            user_data["otp"] = otp
-            user_data["email"] = email
             Otp_Verification.apply_async(args=[user_data])
         except Exception as e:
-                logger.warning(f"Email sending failed during registration: {str(e)}")
-        return Response({"Email":email}, status=status.HTTP_200_OK)
+            logger.warning(f"Email sending failed: {str(e)}")
+
+        return Response({"Email": email, "Status": status_message}, status=status.HTTP_200_OK)
 
 
 # Logout View
