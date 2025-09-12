@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate
 from django.core.cache import cache  
 from .authentication import generate_otp,user_key,CookieJWTAuthentication
 from .tasks import Otp_Verification
-from django.contrib.auth.models import User
+from .models import CustomUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 
