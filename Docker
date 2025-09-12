@@ -26,8 +26,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Ensure Conda is properly initialized in non-interactive shells
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
 
-# Activate Conda in the image
-SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
+
 
 # Remove pip requirements copy and installation
 # COPY requirements.txt /app/
