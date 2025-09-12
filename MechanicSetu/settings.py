@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'jet',
     "users",
     "core",
+    'channels',
+    'corsheaders',
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
