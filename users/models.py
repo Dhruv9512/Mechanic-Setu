@@ -12,7 +12,10 @@ class CustomUserManager(BaseUserManager):
         email = self.normalize_email(email)
         extra_fields.setdefault("is_active", True)
         user = self.model(email=email, **extra_fields)
-        user.set_password(password)  # password is still required for login
+        if password:
+            user.set_password(password)  # set password if provided
+        else:
+            user.set_unusable_password()  # for Google login users
         user.save(using=self._db)
         return user
 
@@ -34,6 +37,14 @@ class CustomUserManager(BaseUserManager):
 class CustomUser(AbstractUser):
     username = None  # remove username
     email = models.EmailField(unique=True)
+
+    # ✅ Add profile_pic
+    profile_pic = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        default=""
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []  # removes username from createsuperuser prompt

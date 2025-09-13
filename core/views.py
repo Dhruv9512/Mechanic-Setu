@@ -78,8 +78,8 @@ class MeApiView(APIView):
 
 
 class ExpiredCleanupView(APIView):
-    authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    authentication_classes = []
+    permission_classes = [AllowAny]
     def get(self, request):
 
         try:

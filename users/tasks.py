@@ -29,3 +29,30 @@ def Otp_Verification(user_data):
         logger.error(f"Error sending registration email: {str(e)}")
 
 
+@shared_task
+def send_login_success_email(user_data):
+    try:
+        subject = "Login Successful - Mechanic Setu"
+        from_email = EMAIL_HOST_USER
+        recipient_list = [user_data.get("email")]
+
+        context = {
+            "first_name": user_data.get("first_name", ""),
+            "last_name": user_data.get("last_name", ""),
+        }
+
+        # ✅ Use a template for HTML email
+        message = render_to_string("Login_Successful.html", context)
+
+        send_mail(
+            subject,
+            message,  # fallback plain-text
+            from_email,
+            recipient_list,
+            fail_silently=False,
+            html_message=message
+        )
+        logger.info(f"Login success email sent to {recipient_list[0]}")
+
+    except Exception as e:
+        logger.error(f"Error sending login success email: {str(e)}")
