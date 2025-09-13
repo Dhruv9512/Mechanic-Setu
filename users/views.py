@@ -101,8 +101,6 @@ class Login_SignUpView(APIView):
                 user.save()
                 status_message = "New User"
             else:
-                if not user.is_active:
-                    return Response({"error": "You are not verified yet."}, status=status.HTTP_403_FORBIDDEN)
                 status_message = "Existing User"
 
             cache_key = f"otp_{email}"
@@ -198,9 +196,6 @@ class Google_Login_SignupView(APIView):
                 )
                 status_message = "New User"
             else:
-                if not user.is_active:
-                    return Response({"error": "You are not verified yet."}, status=status.HTTP_403_FORBIDDEN)
-
                 updated = False
                 if user.first_name != first_name:
                     user.first_name = first_name or ""
