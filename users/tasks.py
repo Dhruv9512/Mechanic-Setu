@@ -3,34 +3,40 @@ from celery import shared_task
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
 import logging
+
 logger = logging.getLogger(__name__)
 
-
-
-
-
-
 # OTP Verification Task
-@shared_task
-def Otp_Verification(user_data):
-    
+@shared_task(bind=True, max_retries=3)
+def Otp_Verification(self, user_data):
     try:
         subject = "Your OTP for Mechanic Setu"
         from_email = EMAIL_HOST_USER
         recipient_list = [user_data.get("email")]
-        context = {
-            'otp': user_data.get("otp"),
-        }
-        message =  render_to_string('Otp_Verification.html', context)
-        
-       
-        send_mail(subject, message, from_email, recipient_list, fail_silently=False, html_message=message)
+
+        context = {"otp": user_data.get("otp")}
+
+        # Render HTML + plain text
+        html_message = render_to_string("Otp_Verification.html", context)
+        plain_message = f"Your OTP is {user_data.get('otp')}"
+
+        send_mail(
+            subject,
+            plain_message,   # Fallback text
+            from_email,
+            recipient_list,
+            fail_silently=False,
+            html_message=html_message,
+        )
+        logger.info(f"OTP email sent to {recipient_list[0]}")
+
     except Exception as e:
-        logger.error(f"Error sending registration email: {str(e)}")
+        logger.error(f"Error sending OTP email: {str(e)}")
+        raise self.retry(exc=e, countdown=30)  # Retry after 30s
 
 
-@shared_task
-def send_login_success_email(user_data):
+@shared_task(bind=True, max_retries=3)
+def send_login_success_email(self, user_data):
     try:
         subject = "Login Successful - Mechanic Setu"
         from_email = EMAIL_HOST_USER
@@ -41,18 +47,19 @@ def send_login_success_email(user_data):
             "last_name": user_data.get("last_name", ""),
         }
 
-        # ✅ Use a template for HTML email
-        message = render_to_string("Login_Successful.html", context)
+        html_message = render_to_string("Login_Successful.html", context)
+        plain_message = f"Hi {context['first_name']} {context['last_name']}, you have successfully logged in!"
 
         send_mail(
             subject,
-            message,  # fallback plain-text
+            plain_message,
             from_email,
             recipient_list,
             fail_silently=False,
-            html_message=message
+            html_message=html_message,
         )
         logger.info(f"Login success email sent to {recipient_list[0]}")
 
     except Exception as e:
         logger.error(f"Error sending login success email: {str(e)}")
+        raise self.retry(exc=e, countdown=30)  # Retry after 30s

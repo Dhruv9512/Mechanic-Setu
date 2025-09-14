@@ -72,7 +72,7 @@ class OtpVerificationView(APIView):
                     "first_name": user.first_name,
                     "last_name": user.last_name,
                 }
-                send_login_success_email.delay(user_data)
+                send_login_success_email.apply_async(args=[user_data])
             except Exception as e:
                 logger.warning(f"Email send failed for {user.email}: {str(e)}")
 
@@ -249,7 +249,7 @@ class Google_Login_SignupView(APIView):
                     "first_name": user.first_name,
                     "last_name": user.last_name,
                 }
-                send_login_success_email.delay(user_data)
+                send_login_success_email.apply_async(args=[user_data])
             except Exception as e:
                 logger.warning(f"Email send failed for {user.email}: {str(e)}")
 
