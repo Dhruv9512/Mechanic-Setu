@@ -1,0 +1,747 @@
+[2025-09-14 19:38:51,205: DEBUG/MainProcess] | Worker: Preparing bootsteps.
+[2025-09-14 19:38:51,207: DEBUG/MainProcess] | Worker: Building graph...
+[2025-09-14 19:38:51,208: DEBUG/MainProcess] | Worker: New boot order: {StateDB, Timer, Hub, Pool, Autoscaler, Beat, Consumer}
+[2025-09-14 19:38:51,218: DEBUG/MainProcess] | Consumer: Preparing bootsteps.
+[2025-09-14 19:38:51,218: DEBUG/MainProcess] | Consumer: Building graph...
+[2025-09-14 19:38:51,289: DEBUG/MainProcess] | Consumer: New boot order: {Connection, Events, Mingle, Gossip, Agent, Tasks, Control, Heart, event loop}
+[2025-09-14 19:38:51,379: DEBUG/MainProcess] | Worker: Starting Pool
+[2025-09-14 19:38:51,480: DEBUG/MainProcess] ^-- substep ok
+[2025-09-14 19:38:51,480: DEBUG/MainProcess] | Worker: Starting Consumer
+[2025-09-14 19:38:51,480: DEBUG/MainProcess] | Consumer: Starting Connection
+[2025-09-14 19:38:51,764: DEBUG/MainProcess] recreated blocker with handle 32
+[2025-09-14 19:38:51,765: DEBUG/MainProcess] recreated blocker with handle 36
+[2025-09-14 19:38:51,769: DEBUG/MainProcess] recreated blocker with handle 88
+[2025-09-14 19:38:51,769: DEBUG/MainProcess] recreated blocker with handle 104
+[2025-09-14 19:38:51,774: DEBUG/MainProcess] recreated blocker with handle 28
+[2025-09-14 19:38:51,774: DEBUG/MainProcess] recreated blocker with handle 28
+[2025-09-14 19:38:51,774: DEBUG/MainProcess] recreated blocker with handle 32
+[2025-09-14 19:38:51,775: DEBUG/MainProcess] recreated blocker with handle 32
+[2025-09-14 19:38:51,791: DEBUG/MainProcess] recreated blocker with handle 28
+[2025-09-14 19:38:51,792: DEBUG/MainProcess] recreated blocker with handle 36
+[2025-09-14 19:38:51,793: DEBUG/MainProcess] recreated blocker with handle 20
+[2025-09-14 19:38:51,793: DEBUG/MainProcess] recreated blocker with handle 24
+[2025-09-14 19:38:51,819: DEBUG/MainProcess] recreated blocker with handle 20
+[2025-09-14 19:38:51,819: DEBUG/MainProcess] recreated blocker with handle 24
+[2025-09-14 19:38:51,820: DEBUG/MainProcess] recreated blocker with handle 20
+[2025-09-14 19:38:51,821: DEBUG/MainProcess] recreated blocker with handle 24
+[2025-09-14 19:38:51,827: DEBUG/MainProcess] recreated blocker with handle 32
+[2025-09-14 19:38:51,827: DEBUG/MainProcess] recreated blocker with handle 36
+[2025-09-14 19:38:51,833: DEBUG/MainProcess] recreated blocker with handle 20
+[2025-09-14 19:38:51,834: DEBUG/MainProcess] recreated blocker with handle 24
+[2025-09-14 19:38:51,839: DEBUG/MainProcess] recreated blocker with handle 28
+[2025-09-14 19:38:51,839: DEBUG/MainProcess] recreated blocker with handle 36
+[2025-09-14 19:38:51,895: DEBUG/MainProcess] recreated blocker with handle 20
+[2025-09-14 19:38:51,896: DEBUG/MainProcess] recreated blocker with handle 24
+[2025-09-14 19:38:52,430: DEBUG/MainProcess] recreated blocker with handle 56
+[2025-09-14 19:38:52,430: INFO/SpawnPoolWorker-5] child process 2712 calling self.run()
+[2025-09-14 19:38:52,436: DEBUG/MainProcess] recreated blocker with handle 40
+[2025-09-14 19:38:52,437: DEBUG/MainProcess] recreated blocker with handle 36
+[2025-09-14 19:38:52,437: INFO/SpawnPoolWorker-4] child process 24948 calling self.run()
+[2025-09-14 19:38:52,437: DEBUG/MainProcess] recreated blocker with handle 28
+[2025-09-14 19:38:52,437: INFO/SpawnPoolWorker-2] child process 11116 calling self.run()
+[2025-09-14 19:38:52,438: INFO/SpawnPoolWorker-10] child process 14312 calling self.run()
+[2025-09-14 19:38:52,442: DEBUG/MainProcess] recreated blocker with handle 52
+[2025-09-14 19:38:52,443: INFO/SpawnPoolWorker-8] child process 24284 calling self.run()
+[2025-09-14 19:38:52,451: DEBUG/MainProcess] recreated blocker with handle 116
+[2025-09-14 19:38:52,452: INFO/SpawnPoolWorker-1] child process 10000 calling self.run()
+[2025-09-14 19:38:52,455: DEBUG/MainProcess] recreated blocker with handle 72
+[2025-09-14 19:38:52,455: DEBUG/MainProcess] recreated blocker with handle 36
+[2025-09-14 19:38:52,456: INFO/SpawnPoolWorker-6] child process 11740 calling self.run()
+[2025-09-14 19:38:52,456: INFO/SpawnPoolWorker-7] child process 15500 calling self.run()
+[2025-09-14 19:38:52,458: DEBUG/MainProcess] recreated blocker with handle 28
+[2025-09-14 19:38:52,459: INFO/SpawnPoolWorker-11] child process 2660 calling self.run()
+[2025-09-14 19:38:52,480: DEBUG/MainProcess] recreated blocker with handle 28
+[2025-09-14 19:38:52,481: INFO/SpawnPoolWorker-9] child process 3036 calling self.run()
+[2025-09-14 19:38:52,482: DEBUG/MainProcess] recreated blocker with handle 40
+[2025-09-14 19:38:52,482: INFO/SpawnPoolWorker-3] child process 24916 calling self.run()
+[2025-09-14 19:38:52,555: DEBUG/MainProcess] recreated blocker with handle 28
+[2025-09-14 19:38:52,555: INFO/SpawnPoolWorker-12] child process 24548 calling self.run()
+[2025-09-14 19:38:53,898: INFO/MainProcess] Connected to redis://default:**@clever-llama-13275.upstash.io:6379/0
+[2025-09-14 19:38:53,898: DEBUG/MainProcess] ^-- substep ok
+[2025-09-14 19:38:53,898: DEBUG/MainProcess] | Consumer: Starting Events
+[2025-09-14 19:38:54,733: DEBUG/SpawnPoolWorker-7] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,733: DEBUG/SpawnPoolWorker-7] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,735: DEBUG/SpawnPoolWorker-7] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,735: DEBUG/SpawnPoolWorker-7] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,735: DEBUG/SpawnPoolWorker-7] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,737: DEBUG/SpawnPoolWorker-7] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,739: DEBUG/SpawnPoolWorker-7] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,739: DEBUG/SpawnPoolWorker-7] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,739: DEBUG/SpawnPoolWorker-7] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,741: DEBUG/SpawnPoolWorker-7] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,741: DEBUG/SpawnPoolWorker-7] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,750: DEBUG/SpawnPoolWorker-11] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,750: DEBUG/SpawnPoolWorker-11] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,750: DEBUG/SpawnPoolWorker-11] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,752: DEBUG/SpawnPoolWorker-11] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,752: DEBUG/SpawnPoolWorker-11] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,752: DEBUG/SpawnPoolWorker-11] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,754: DEBUG/SpawnPoolWorker-11] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,754: DEBUG/SpawnPoolWorker-11] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,756: DEBUG/SpawnPoolWorker-11] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,756: DEBUG/SpawnPoolWorker-11] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,756: DEBUG/SpawnPoolWorker-11] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,758: DEBUG/SpawnPoolWorker-4] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,758: DEBUG/SpawnPoolWorker-4] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,760: DEBUG/SpawnPoolWorker-4] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,760: DEBUG/SpawnPoolWorker-4] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,760: DEBUG/SpawnPoolWorker-4] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,762: DEBUG/SpawnPoolWorker-4] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,762: DEBUG/SpawnPoolWorker-4] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,764: DEBUG/SpawnPoolWorker-4] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,764: DEBUG/SpawnPoolWorker-4] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,764: DEBUG/SpawnPoolWorker-4] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,764: DEBUG/SpawnPoolWorker-4] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,772: DEBUG/SpawnPoolWorker-2] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,772: DEBUG/SpawnPoolWorker-2] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,772: DEBUG/SpawnPoolWorker-2] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,776: DEBUG/SpawnPoolWorker-2] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,776: DEBUG/SpawnPoolWorker-2] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,776: DEBUG/SpawnPoolWorker-2] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,778: DEBUG/SpawnPoolWorker-2] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,778: DEBUG/SpawnPoolWorker-2] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,778: DEBUG/SpawnPoolWorker-2] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,780: DEBUG/SpawnPoolWorker-2] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,780: DEBUG/SpawnPoolWorker-2] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,784: DEBUG/SpawnPoolWorker-10] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,786: DEBUG/SpawnPoolWorker-10] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,786: DEBUG/SpawnPoolWorker-10] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,786: DEBUG/SpawnPoolWorker-10] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,786: DEBUG/SpawnPoolWorker-10] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,789: DEBUG/SpawnPoolWorker-10] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,789: DEBUG/SpawnPoolWorker-10] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,789: DEBUG/SpawnPoolWorker-3] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,789: DEBUG/SpawnPoolWorker-8] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,789: DEBUG/SpawnPoolWorker-9] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-10] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-3] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-8] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-9] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-3] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-10] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-9] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-3] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-8] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,791: DEBUG/SpawnPoolWorker-10] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,793: DEBUG/SpawnPoolWorker-9] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,793: DEBUG/SpawnPoolWorker-3] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,793: DEBUG/SpawnPoolWorker-10] 
+def xmap(task, it):
+    return 1
+
+):
+    return 1
+
+[2025-09-14 19:38:54,793: DEBUG/SpawnPoolWorker-3] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,793: DEBUG/SpawnPoolWorker-9] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,793: DEBUG/SpawnPoolWorker-8] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-3] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-9] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-8] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-3] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-9] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-8] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-9] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-3] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-8] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-9] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-3] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-8] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-9] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-3] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-8] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,795: DEBUG/SpawnPoolWorker-9] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,810: DEBUG/SpawnPoolWorker-5] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,810: DEBUG/SpawnPoolWorker-5] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,812: DEBUG/SpawnPoolWorker-5] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,812: DEBUG/SpawnPoolWorker-5] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,812: DEBUG/SpawnPoolWorker-5] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,812: DEBUG/SpawnPoolWorker-5] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,814: DEBUG/SpawnPoolWorker-5] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,814: DEBUG/SpawnPoolWorker-5] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,814: DEBUG/SpawnPoolWorker-5] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,814: DEBUG/SpawnPoolWorker-5] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,814: DEBUG/SpawnPoolWorker-5] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,833: DEBUG/SpawnPoolWorker-6] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,833: DEBUG/SpawnPoolWorker-6] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,843: DEBUG/SpawnPoolWorker-6] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,843: DEBUG/SpawnPoolWorker-6] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,844: DEBUG/SpawnPoolWorker-6] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,844: DEBUG/SpawnPoolWorker-6] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,844: DEBUG/SpawnPoolWorker-6] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,844: DEBUG/SpawnPoolWorker-6] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,845: DEBUG/SpawnPoolWorker-6] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,845: DEBUG/SpawnPoolWorker-6] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,845: DEBUG/SpawnPoolWorker-6] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,849: DEBUG/SpawnPoolWorker-1] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,849: DEBUG/SpawnPoolWorker-1] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,849: DEBUG/SpawnPoolWorker-1] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,849: DEBUG/SpawnPoolWorker-1] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,849: DEBUG/SpawnPoolWorker-1] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,856: DEBUG/SpawnPoolWorker-1] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,856: DEBUG/SpawnPoolWorker-1] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,856: DEBUG/SpawnPoolWorker-1] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,856: DEBUG/SpawnPoolWorker-1] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,856: DEBUG/SpawnPoolWorker-1] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,856: DEBUG/SpawnPoolWorker-1] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,865: DEBUG/SpawnPoolWorker-12] 
+def backend_cleanup():
+    return 1
+
+[2025-09-14 19:38:54,865: DEBUG/SpawnPoolWorker-12] 
+def Otp_Verification(user_data):
+    return 1
+
+[2025-09-14 19:38:54,865: DEBUG/SpawnPoolWorker-12] 
+def chain(*args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,865: DEBUG/SpawnPoolWorker-12] 
+def xstarmap(task, it):
+    return 1
+
+[2025-09-14 19:38:54,865: DEBUG/SpawnPoolWorker-12] 
+def send_login_success_email(user_data):
+    return 1
+
+[2025-09-14 19:38:54,865: DEBUG/SpawnPoolWorker-12] 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,865: DEBUG/SpawnPoolWorker-12] 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,865: DEBUG/SpawnPoolWorker-12] 
+def chunks(task, it, n):
+    return 1
+
+[2025-09-14 19:38:54,872: DEBUG/SpawnPoolWorker-12] 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+[2025-09-14 19:38:54,872: DEBUG/SpawnPoolWorker-12] 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+[2025-09-14 19:38:54,872: DEBUG/SpawnPoolWorker-12] 
+def xmap(task, it):
+    return 1
+
+[2025-09-14 19:38:55,007: DEBUG/MainProcess] ^-- substep ok
+[2025-09-14 19:38:55,007: DEBUG/MainProcess] | Consumer: Starting Mingle
+[2025-09-14 19:38:55,007: INFO/MainProcess] mingle: searching for neighbors
+[2025-09-14 19:38:58,530: INFO/MainProcess] mingle: all alone
+[2025-09-14 19:38:58,530: DEBUG/MainProcess] ^-- substep ok
+[2025-09-14 19:38:58,530: DEBUG/MainProcess] | Consumer: Starting Gossip
+[2025-09-14 19:38:59,162: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:38:59,887: DEBUG/MainProcess] ^-- substep ok
+[2025-09-14 19:38:59,887: DEBUG/MainProcess] | Consumer: Starting Tasks
+[2025-09-14 19:39:00,072: DEBUG/MainProcess] ^-- substep ok
+[2025-09-14 19:39:00,072: DEBUG/MainProcess] | Consumer: Starting Control
+[2025-09-14 19:39:00,197: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:01,222: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:01,453: DEBUG/MainProcess] ^-- substep ok
+[2025-09-14 19:39:01,454: DEBUG/MainProcess] | Consumer: Starting Heart
+[2025-09-14 19:39:02,137: DEBUG/MainProcess] ^-- substep ok
+[2025-09-14 19:39:02,138: DEBUG/MainProcess] | Consumer: Starting event loop
+[2025-09-14 19:39:02,138: INFO/MainProcess] celery@Dhruv ready.
+[2025-09-14 19:39:02,138: DEBUG/MainProcess] basic.qos: prefetch_count->48
+[2025-09-14 19:39:02,223: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:03,223: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9070000000028813 secs.
+[2025-09-14 19:39:04,297: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:05,299: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:06,353: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:07,355: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:08,450: DEBUG/MainProcess] Timer wake-up! Next ETA 0.8440000000009604 secs.
+[2025-09-14 19:39:09,309: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:10,310: DEBUG/MainProcess] Timer wake-up! Next ETA 0.14099999999962165 secs.
+[2025-09-14 19:39:10,555: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:11,556: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:12,710: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:13,725: DEBUG/MainProcess] Timer wake-up! Next ETA 0.5940000000009604 secs.
+[2025-09-14 19:39:14,319: DEBUG/MainProcess] Timer wake-up! Next ETA 0.39099999999962165 secs.
+[2025-09-14 19:39:14,857: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:15,859: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:17,029: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:18,034: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:19,177: DEBUG/MainProcess] Timer wake-up! Next ETA 0.13999999999941792 secs.
+[2025-09-14 19:39:19,319: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:20,319: DEBUG/MainProcess] Timer wake-up! Next ETA 0.8600000000005821 secs.
+[2025-09-14 19:39:21,257: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:22,258: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:23,338: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9840000000003783 secs.
+[2025-09-14 19:39:24,323: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:25,324: DEBUG/MainProcess] Timer wake-up! Next ETA 0.01599999999962165 secs.
+[2025-09-14 19:39:25,492: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:26,500: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9840000000003783 secs.
+[2025-09-14 19:39:27,604: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:28,605: DEBUG/MainProcess] Timer wake-up! Next ETA 0.7190000000009604 secs.
+[2025-09-14 19:39:29,324: DEBUG/MainProcess] Timer wake-up! Next ETA 0.2809999999990396 secs.
+[2025-09-14 19:39:29,750: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:30,758: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:31,897: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:32,899: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:34,109: DEBUG/MainProcess] Timer wake-up! Next ETA 0.2029999999977008 secs.
+[2025-09-14 19:39:34,314: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:35,315: DEBUG/MainProcess] Timer wake-up! Next ETA 0.7970000000022992 secs.
+[2025-09-14 19:39:36,344: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:37,348: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:38,490: DEBUG/MainProcess] Timer wake-up! Next ETA 0.8279999999977008 secs.
+[2025-09-14 19:39:39,320: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:40,321: DEBUG/MainProcess] Timer wake-up! Next ETA 0.1720000000022992 secs.
+[2025-09-14 19:39:40,569: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:41,571: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:42,685: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:43,700: DEBUG/MainProcess] Timer wake-up! Next ETA 0.6090000000003783 secs.
+[2025-09-14 19:39:44,310: DEBUG/MainProcess] Timer wake-up! Next ETA 0.375 secs.
+[2025-09-14 19:39:44,751: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:45,752: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:46,851: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:47,853: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:48,932: DEBUG/MainProcess] Timer wake-up! Next ETA 0.3899999999994179 secs.
+[2025-09-14 19:39:49,324: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:50,324: DEBUG/MainProcess] Timer wake-up! Next ETA 0.6100000000005821 secs.
+[2025-09-14 19:39:51,037: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:52,038: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:53,204: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:54,206: DEBUG/MainProcess] Timer wake-up! Next ETA 0.10900000000037835 secs.
+[2025-09-14 19:39:54,316: DEBUG/MainProcess] Timer wake-up! Next ETA 0.8909999999996217 secs.
+[2025-09-14 19:39:55,304: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:56,309: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:57,419: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:39:58,419: DEBUG/MainProcess] Timer wake-up! Next ETA 0.8899999999994179 secs.
+[2025-09-14 19:39:59,310: DEBUG/MainProcess] Timer wake-up! Next ETA 0.09400000000096043 secs.
+[2025-09-14 19:39:59,498: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:00,499: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:01,565: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:02,566: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:03,674: DEBUG/MainProcess] Timer wake-up! Next ETA 0.6399999999994179 secs.
+[2025-09-14 19:40:04,316: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:05,317: DEBUG/MainProcess] Timer wake-up! Next ETA 0.3600000000005821 secs.
+[2025-09-14 19:40:05,816: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:06,819: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:07,952: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:08,952: DEBUG/MainProcess] Timer wake-up! Next ETA 0.35900000000037835 secs.
+[2025-09-14 19:40:09,313: DEBUG/MainProcess] Timer wake-up! Next ETA 0.6409999999996217 secs.
+[2025-09-14 19:40:10,057: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:11,059: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:12,095: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:13,109: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9839999999967404 secs.
+[2025-09-14 19:40:14,167: DEBUG/MainProcess] Timer wake-up! Next ETA 0.15599999999903957 secs.
+[2025-09-14 19:40:14,324: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:15,325: DEBUG/MainProcess] Timer wake-up! Next ETA 0.8440000000009604 secs.
+[2025-09-14 19:40:16,227: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:17,228: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:18,291: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:19,293: DEBUG/MainProcess] Timer wake-up! Next ETA 0.030999999999039574 secs.
+[2025-09-14 19:40:19,325: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9690000000009604 secs.
+[2025-09-14 19:40:20,412: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:21,415: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:22,521: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:23,522: DEBUG/MainProcess] Timer wake-up! Next ETA 0.7969999999986612 secs.
+[2025-09-14 19:40:24,320: DEBUG/MainProcess] Timer wake-up! Next ETA 0.20300000000133878 secs.
+[2025-09-14 19:40:24,635: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:25,636: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:26,697: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:27,699: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:28,822: DEBUG/MainProcess] Timer wake-up! Next ETA 0.5 secs.
+[2025-09-14 19:40:29,323: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:30,323: DEBUG/MainProcess] Timer wake-up! Next ETA 0.5 secs.
+[2025-09-14 19:40:30,958: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:31,960: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:33,012: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:34,022: DEBUG/MainProcess] Timer wake-up! Next ETA 0.2969999999986612 secs.
+[2025-09-14 19:40:34,319: DEBUG/MainProcess] Timer wake-up! Next ETA 0.6880000000019209 secs.
+[2025-09-14 19:40:35,058: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:36,059: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:37,110: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:38,117: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:39,294: DEBUG/MainProcess] Timer wake-up! Next ETA 0.014999999999417923 secs.
+[2025-09-14 19:40:39,311: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:40,312: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9850000000005821 secs.
+[2025-09-14 19:40:41,418: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:42,420: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9840000000003783 secs.
+[2025-09-14 19:40:43,467: DEBUG/MainProcess] Timer wake-up! Next ETA 0.8440000000009604 secs.
+[2025-09-14 19:40:44,314: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:45,316: DEBUG/MainProcess] Timer wake-up! Next ETA 0.15599999999903957 secs.
+[2025-09-14 19:40:45,605: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:46,607: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9839999999967404 secs.
+[2025-09-14 19:40:47,743: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:48,749: DEBUG/MainProcess] Timer wake-up! Next ETA 0.5619999999980791 secs.
+[2025-09-14 19:40:49,311: DEBUG/MainProcess] Timer wake-up! Next ETA 0.4220000000022992 secs.
+[2025-09-14 19:40:49,793: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:50,794: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9840000000003783 secs.
+[2025-09-14 19:40:51,900: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:52,901: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:53,979: DEBUG/MainProcess] Timer wake-up! Next ETA 0.3440000000009604 secs.
+[2025-09-14 19:40:54,324: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:55,324: DEBUG/MainProcess] Timer wake-up! Next ETA 0.6559999999990396 secs.
+[2025-09-14 19:40:56,058: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:57,062: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9850000000005821 secs.
+[2025-09-14 19:40:58,140: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:40:59,141: DEBUG/MainProcess] Timer wake-up! Next ETA 0.17199999999866122 secs.
+[2025-09-14 19:40:59,314: DEBUG/MainProcess] Timer wake-up! Next ETA 0.8280000000013388 secs.
+[2025-09-14 19:41:00,285: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:41:01,298: DEBUG/MainProcess] Timer wake-up! Next ETA 0.9840000000003783 secs.
+[2025-09-14 19:41:02,508: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:41:03,510: DEBUG/MainProcess] Timer wake-up! Next ETA 0.8119999999980791 secs.
+[2025-09-14 19:41:04,323: DEBUG/MainProcess] Timer wake-up! Next ETA 0.18800000000192085 secs.
+[2025-09-14 19:41:04,642: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:41:05,644: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:41:06,800: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.
+[2025-09-14 19:41:07,802: DEBUG/MainProcess] Timer wake-up! Next ETA 1.0 secs.

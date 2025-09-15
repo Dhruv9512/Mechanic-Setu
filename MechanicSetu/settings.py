@@ -86,15 +86,17 @@ CHANNEL_LAYERS = {
 }
 
 
+
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL  
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-CELERY_TASK_EAGER_PROPAGATES = True
 
-# Use SSL properly in production
+# Always use SSL with Upstash
 CELERY_BROKER_USE_SSL = {
-    'ssl_cert_reqs': ssl.CERT_REQUIRED if not DEBUG else None
+    "ssl_cert_reqs": ssl.CERT_NONE
 }
 
 # ----------------------

@@ -7,8 +7,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 # OTP Verification Task
-@shared_task(bind=True, max_retries=3)
-def Otp_Verification(self, user_data):
+@shared_task
+def Otp_Verification(user_data):
     try:
         subject = "Your OTP for Mechanic Setu"
         from_email = EMAIL_HOST_USER
@@ -22,21 +22,22 @@ def Otp_Verification(self, user_data):
 
         send_mail(
             subject,
-            plain_message,   # Fallback text
+            plain_message,
             from_email,
             recipient_list,
-            fail_silently=False,
             html_message=html_message,
+            fail_silently=False,
         )
+
         logger.info(f"OTP email sent to {recipient_list[0]}")
 
     except Exception as e:
-        logger.error(f"Error sending OTP email: {str(e)}")
-        raise self.retry(exc=e, countdown=30)  # Retry after 30s
+        logger.error(f"Error sending OTP email: {str(e)}",exc_info=True)
 
 
-@shared_task(bind=True, max_retries=3)
-def send_login_success_email(self, user_data):
+
+@shared_task
+def send_login_success_email(user_data):
     try:
         subject = "Login Successful - Mechanic Setu"
         from_email = EMAIL_HOST_USER
@@ -55,11 +56,12 @@ def send_login_success_email(self, user_data):
             plain_message,
             from_email,
             recipient_list,
-            fail_silently=False,
             html_message=html_message,
+            fail_silently=False,
         )
+
         logger.info(f"Login success email sent to {recipient_list[0]}")
 
     except Exception as e:
-        logger.error(f"Error sending login success email: {str(e)}")
-        raise self.retry(exc=e, countdown=30)  # Retry after 30s
+        logger.error(f"Error sending login success email: {str(e)}",exc_info=True)
+       
