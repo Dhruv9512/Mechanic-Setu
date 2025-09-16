@@ -19,106 +19,141 @@ logger = logging.getLogger(__name__)
 
 # Otp Verification View
 class OtpVerificationView(APIView):
-    permission_classes = [AllowAny]  
+    permission_classes = [AllowAny]
 
     def post(self, request):
+        email = request.data.get('email')
+        otp = request.data.get('otp')
+
+        if not email or not otp:
+            return Response(
+                {"error": "Email and OTP are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
-            email = request.data.get('email')
-            otp = request.data.get('otp')
-
-            if not email or not otp:
-                return Response({"error": "Email and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
-
+            # Validate OTP
             cache_key = f"otp_{email}"
             cached_otp = cache.get(cache_key)
-            if cached_otp is None or cached_otp != otp:
-                return Response({"error": "Invalid email or OTP."}, status=status.HTTP_401_UNAUTHORIZED)
 
+            if cached_otp != otp:
+                return Response(
+                    {"error": "Invalid email or OTP."},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            # Validate user
             user = CustomUser.objects.filter(email=email).first()
-            if user is None:
-                return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            if not user:
+                return Response(
+                    {"error": "User not found."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
-            user.is_active = True
-            user.save()
+            # Activate user if needed
+            if not user.is_active:
+                user.is_active = True
+                user.save(update_fields=["is_active"])
 
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
+            # Generate JWT tokens
+            try:
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
+            except Exception as e:
+                logger.error(f"Token generation failed for {user.email}: {str(e)}")
+                return Response(
+                    {"error": "Failed to generate tokens."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
-            response = Response({
-                "message": "OTP verified successfully."
-            }, status=status.HTTP_200_OK)
+            # Build response
+            response = Response(
+                {"message": "OTP verified successfully."},
+                status=status.HTTP_200_OK
+            )
+
+            cookie_settings = {
+                "httponly": True,
+                "secure": True,
+                "samesite": "None",
+            }
 
             response.set_cookie(
                 key="access",
                 value=str(access_token),
-                httponly=True,
-                secure=True,
-                samesite="None",
-                max_age=30*60
+                max_age=30 * 60,
+                **cookie_settings
             )
             response.set_cookie(
                 key="refresh",
                 value=str(refresh),
-                httponly=True,
-                secure=True,
-                samesite="None",
-                max_age=7*24*60*60
+                max_age=7 * 24 * 60 * 60,
+                **cookie_settings
             )
 
-            # Send Login Successful Email asynchronously
+            # Async email sending
             try:
-                user_data = {
+                send_login_success_email.apply_async(args=[{
                     "email": user.email,
                     "first_name": user.first_name,
                     "last_name": user.last_name,
-                }
-                send_login_success_email.apply_async(args=[user_data])
+                }])
             except Exception as e:
                 logger.warning(f"Email send failed for {user.email}: {str(e)}")
 
             return response
 
         except Exception as e:
-            logger.exception(f"OTP verification failed for email: {request.data.get('email')}, Error: {str(e)}")
-            return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(
+                f"OTP verification failed for email: {email}, Error: {str(e)}"
+            )
+            return Response(
+                {"error": "Something went wrong. Try again later."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 # Manual Login View
 class Login_SignUpView(APIView):
-    permission_classes = [AllowAny] 
+    permission_classes = [AllowAny]
 
     def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response(
+                {"error": "Email is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
-            email = request.data.get('email')
-            if not email:
-                return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+            # ✅ Use get_or_create (1 DB call instead of 2)
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={"is_active": False},
+            )
+            status_message = "New User" if created else "Existing User"
 
-            user = authenticate(request, email=email)
-
-            if user is None:
-                user = CustomUser.objects.create_user(email=email)
-                user.is_active = False
-                user.save()
-                status_message = "New User"
-            else:
-                status_message = "Existing User"
-
-            cache_key = f"otp_{email}"
+            # ✅ Generate & cache OTP
             otp = generate_otp()
-            cache.set(cache_key, otp, timeout=300)
+            cache.set(f"otp_{email}", otp, timeout=300)
 
-            user_data = {"otp": otp, "email": email, "status": status_message}
+            # ✅ Fire async task (non-blocking)
             try:
-                Otp_Verification.apply_async(args=[user_data])
-            except Exception as e:
-                logger.warning(f"OTP email sending failed: {str(e)}")
+                Otp_Verification.apply_async(args={"otp": otp, "email": email, "status": status_message})
+            except Exception as task_error:
+                logger.warning(f"OTP async task enqueue failed for {email}: {task_error}")
 
-            return Response({"Email": email, "Status": status_message}, status=status.HTTP_200_OK)
+            return Response(
+                {"Email": email, "Status": status_message},
+                status=status.HTTP_200_OK
+            )
 
         except Exception as e:
-            logger.exception(f"Login/Signup failed for email: {request.data.get('email')}, Error: {str(e)}")
-            return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            logger.exception(f"Login/Signup failed for email={email}: {e}")
+            return Response(
+                {"error": "Something went wrong. Try again later."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 # Logout View
 class LogoutView(APIView):
@@ -158,103 +193,93 @@ class Google_Login_SignupView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        token = request.data.get("token")
+        if not token:
+            return Response({"error": "Token not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ Verify Google token
         try:
-            token = request.data.get('token')
-            if not token:
-                return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
-
-            try:
-                idinfo = id_token.verify_oauth2_token(
-                    token,
-                    Request(),
-                    os.environ.get('GOOGLE_CLIENT_ID')
-                )
-            except ValueError:
-                return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
-
-            email = idinfo.get('email')
-            first_name = idinfo.get('given_name')
-            last_name = idinfo.get('family_name')
-            profile_pic = idinfo.get('picture')
-
-            if not email:
-                return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
-
-            if email in ["forlaptop2626@gmail.com", "mitsuhamitsuha123@gmail.com"]:
-                return Response({"error": "User not eligible"}, status=status.HTTP_403_FORBIDDEN)
-
-            user = CustomUser.objects.filter(email=email).first()
-
-            if not user:
-                user = CustomUser.objects.create(
-                    email=email,
-                    username=email.split("@")[0],
-                    first_name=first_name or "",
-                    last_name=last_name or "",
-                    profile_pic=profile_pic or "",
-                    is_active=True
-                )
-                status_message = "New User"
-            else:
-                updated = False
-                if user.first_name != first_name:
-                    user.first_name = first_name or ""
-                    updated = True
-                if user.last_name != last_name:
-                    user.last_name = last_name or ""
-                    updated = True
-                if user.profile_pic != profile_pic:
-                    user.profile_pic = profile_pic or ""
-                    updated = True
-                if updated:
-                    try:
-                        user.save()
-                    except Exception as e:
-                        logger.warning(f"Failed to update user data for {user.email}: {str(e)}")
-
-                status_message = "Existing User"
-
-            try:
-                refresh = RefreshToken.for_user(user)
-                access_token = refresh.access_token
-            except Exception as e:
-                logger.error(f"JWT token generation failed for {user.email}: {str(e)}")
-                return Response({"error": "Failed to generate tokens."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-            response = Response({
-                "message": "Login Successful",
-                "status": status_message,
-            }, status=status.HTTP_200_OK)
-
-            response.set_cookie(
-                key="access",
-                value=str(access_token),
-                httponly=True,
-                secure=True,
-                samesite="None",
-                max_age=30 * 60
+            idinfo = id_token.verify_oauth2_token(
+                token,
+                Request(),
+                os.environ.get("GOOGLE_CLIENT_ID")
             )
-            response.set_cookie(
-                key="refresh",
-                value=str(refresh),
-                httponly=True,
-                secure=True,
-                samesite="None",
-                max_age=7 * 24 * 60 * 60
+        except ValueError:
+            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = idinfo.get("email")
+        if not email:
+            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ Blocklist certain users
+        if email in {"forlaptop2626@gmail.com", "mitsuhamitsuha123@gmail.com"}:
+            return Response({"error": "User not eligible"}, status=status.HTTP_403_FORBIDDEN)
+
+        first_name = idinfo.get("given_name", "")
+        last_name = idinfo.get("family_name", "")
+        profile_pic = idinfo.get("picture", "")
+
+        try:
+            # ✅ One query: get_or_create
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "profile_pic": profile_pic,
+                    "is_active": True,
+                },
             )
 
-            try:
-                user_data = {
-                    "email": user.email,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                }
-                send_login_success_email.apply_async(args=[user_data])
-            except Exception as e:
-                logger.warning(f"Email send failed for {user.email}: {str(e)}")
+            status_message = "New User" if created else "Existing User"
 
-            return response
+            # ✅ Update fields if changed (bulk)
+            updates = {}
+            if user.first_name != first_name:
+                updates["first_name"] = first_name
+            if user.last_name != last_name:
+                updates["last_name"] = last_name
+            if user.profile_pic != profile_pic:
+                updates["profile_pic"] = profile_pic
+
+            if updates:
+                CustomUser.objects.filter(pk=user.pk).update(**updates)
 
         except Exception as e:
-            logger.exception(f"Google login failed: {str(e)}")
-            return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(f"User fetch/create failed for {email}: {e}")
+            return Response({"error": "User creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # ✅ Generate tokens
+        try:
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+        except Exception as e:
+            logger.error(f"JWT generation failed for {email}: {e}")
+            return Response({"error": "Failed to generate tokens"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # ✅ Prepare response with cookies
+        response = Response(
+            {"message": "Login Successful", "status": status_message},
+            status=status.HTTP_200_OK,
+        )
+
+        cookie_settings = {
+            "httponly": True,
+            "secure": True,
+            "samesite": "None",
+        }
+
+        response.set_cookie("access", str(access_token), max_age=30 * 60, **cookie_settings)
+        response.set_cookie("refresh", str(refresh), max_age=7 * 24 * 60 * 60, **cookie_settings)
+
+        # ✅ Fire async email task (don’t block request)
+        try:
+            send_login_success_email.delay({
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            })
+        except Exception as e:
+            logger.warning(f"Async email enqueue failed for {email}: {e}")
+
+        return response
