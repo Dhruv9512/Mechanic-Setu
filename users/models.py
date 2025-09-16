@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from phonenumber_field.modelfields import PhoneNumberField
 
 
 class CustomUserManager(BaseUserManager):
@@ -46,6 +47,9 @@ class CustomUser(AbstractUser):
         default=""
     )
 
+    # mobile_number
+    mobile_number = PhoneNumberField(blank=True, null=True, region="IN")
+    
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []  # removes username from createsuperuser prompt
 

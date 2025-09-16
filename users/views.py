@@ -12,6 +12,7 @@ import os
 from google.auth.transport.requests import Request
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
+from .authentication import CookieJWTAuthentication
 
 
 import logging
@@ -93,11 +94,11 @@ class OtpVerificationView(APIView):
 
             # Async email sending
             try:
-                send_login_success_email.apply_async(args=[{
+                send_login_success_email.delay({
                     "email": user.email,
                     "first_name": user.first_name,
                     "last_name": user.last_name,
-                }])
+                })
             except Exception as e:
                 logger.warning(f"Email send failed for {user.email}: {str(e)}")
 
@@ -139,7 +140,7 @@ class Login_SignUpView(APIView):
 
             # ✅ Fire async task (non-blocking)
             try:
-                Otp_Verification.apply_async(args={"otp": otp, "email": email, "status": status_message})
+                Otp_Verification.delay({"otp": otp, "email": email, "status": status_message})
             except Exception as task_error:
                 logger.warning(f"OTP async task enqueue failed for {email}: {task_error}")
 
@@ -283,3 +284,44 @@ class Google_Login_SignupView(APIView):
             logger.warning(f"Async email enqueue failed for {email}: {e}")
 
         return response
+    
+
+# Set the user other details
+
+class SetUsersDetail(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            user = request.user  
+
+            # Extract fields
+            first_name = request.data.get("first_name")
+            last_name = request.data.get("last_name")
+            mobile_number = request.data.get("mobile_number")
+            profile_pic = request.data.get("profile_pic")  
+
+            # Update fields if provided
+            if first_name:
+                user.first_name = first_name
+            if last_name:
+                user.last_name = last_name
+            if mobile_number:
+                user.mobile_number = mobile_number
+            if profile_pic:
+                user.profile_pic = profile_pic
+
+            user.save()
+
+            return Response(
+                {"message": "User details updated successfully"},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            logger.exception(f"User update failed: {e}")
+            return Response(
+                {"error": "User update failed"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
