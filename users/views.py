@@ -125,7 +125,8 @@ class Login_SignUpView(APIView):
                 {"error": "Email is required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
+        #  Delete user if it is not active
+        CustomUser.objects.filter(email=email, is_active=False).delete()
         try:
             # ✅ Use get_or_create (1 DB call instead of 2)
             user, created = CustomUser.objects.get_or_create(
