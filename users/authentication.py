@@ -3,46 +3,51 @@ from rest_framework.exceptions import AuthenticationFailed
 import random
 from hashlib import md5
 import logging
+
 logger = logging.getLogger(__name__)
 
+ACCESS_COOKIE = "access"
+USER_CACHE_PREFIX = "user_cache"
 
-# Custom JWT Authentication to read token from cookies
 class CookieJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
-        # Look for token in cookies instead of headers
-        raw_token = request.COOKIES.get('access')
+        raw_token = request.COOKIES.get(ACCESS_COOKIE)
         if raw_token is None:
             return None
+
         try:
             validated_token = self.get_validated_token(raw_token)
         except Exception as e:
-            raise AuthenticationFailed(f'Token Validation Error: ' + str(e))
+            raise AuthenticationFailed("Token Validation Error: " + str(e))
 
         try:
             user = self.get_user(validated_token)
-            return user, validated_token
         except Exception as e:
-            raise AuthenticationFailed(f'User Retrieval Error: ' + str(e))
-        
+            raise AuthenticationFailed("User Retrieval Error: " + str(e))
+
+        return (user, validated_token)
 
 
-# OTP Generation function
 def generate_otp():
-    """Generate a random 6-digit OTP."""
-    otp = str(random.randint(100000, 999999))
-    return otp
+    """
+    Generate a random 6-digit OTP as a string.
+    """
+    return f"{random.randint(100000, 999999)}"
 
 
-
-
-
-# Cache key functions
 def user_cache_key(request, key_prefix, cache_key):
-    user_id = request.user.pk if request.user.is_authenticated else "anon"
-    key = f"user_cache:{user_id}"
-    return md5(key.encode("utf-8")).hexdigest()
-# Cache key functions
-def user_key(user):
-    key = f"user_cache:{user.pk}"
-    return md5(key.encode("utf-8")).hexdigest()
+    """
+    Stable cache key per user (or 'anon') using md5 hex.
+    Key components are intentionally simple to keep behavior identical.
+    """
+    user_id = request.user.pk if getattr(request.user, "is_authenticated", False) else "anon"
+    base = f"{USER_CACHE_PREFIX}:{user_id}"
+    return md5(base.encode("utf-8")).hexdigest()
 
+
+def user_key(user):
+    """
+    Cache key based on user primary key using md5 hex.
+    """
+    base = f"{USER_CACHE_PREFIX}:{user.pk}"
+    return md5(base.encode("utf-8")).hexdigest()

@@ -1,211 +1,205 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny
+from django.conf import settings
 from django.contrib.auth import authenticate
-from django.core.cache import cache  
-from .authentication import generate_otp,user_key,CookieJWTAuthentication
-from .tasks import Otp_Verification,send_login_success_email
-from .models import CustomUser
-from google.oauth2 import id_token  
-import os
-from google.auth.transport.requests import Request
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
-from .authentication import CookieJWTAuthentication, user_key
+from django.core.cache import cache
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from google.oauth2 import id_token
+from google.auth.transport.requests import Request
+
+from .authentication import generate_otp, user_key, CookieJWTAuthentication
+from .tasks import Otp_Verification, send_login_success_email
+from .models import CustomUser
 
 import logging
+import os
+
 logger = logging.getLogger(__name__)
 
-# Otp Verification View
+# -------------------------
+# Constants / helpers
+# -------------------------
+
+ACCESS_COOKIE = "access"
+REFRESH_COOKIE = "refresh"
+ACCESS_MAX_AGE = 30 * 60                 # 30 minutes
+REFRESH_MAX_AGE = 7 * 24 * 60 * 60       # 7 days
+OTP_TTL_SECONDS = 140
+
+BLOCKLISTED_EMAILS = {"forlaptop2626@gmail.com", "mitsuhamitsuha123@gmail.com"}
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+
+
+def jwt_cookie_opts():
+    # SameSite=None requires Secure for modern browsers; use HTTPS in prod
+    # Keep consistent with frontend withCredentials and CORS allow-credentials
+    # to ensure cookies are accepted by browsers.
+    # Refs: SameSite=None + Secure requirements
+    return {
+        "httponly": True,
+        "secure": True,
+        "samesite": "None",
+    }
+
+
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
+    opts = jwt_cookie_opts()
+    response.set_cookie(ACCESS_COOKIE, access_token, max_age=ACCESS_MAX_AGE, **opts)
+    response.set_cookie(REFRESH_COOKIE, refresh_token, max_age=REFRESH_MAX_AGE, **opts)
+
+
+def clear_auth_cookies(response: Response):
+    response.delete_cookie(ACCESS_COOKIE)
+    response.delete_cookie(REFRESH_COOKIE)
+
+
+def issue_tokens_for_user(user: CustomUser):
+    refresh = RefreshToken.for_user(user)
+    return str(refresh.access_token), str(refresh)
+
+
+# -------------------------
+# Views
+# -------------------------
+
 class OtpVerificationView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        key = request.data.get('key')
-        otp = request.data.get('otp')
-        id = request.data.get('id')
+        key = request.data.get("key")
+        otp = request.data.get("otp")
+        user_id = request.data.get("id")
+
         if not key or not otp:
-            return Response(
-                {"error": "Key and OTP are required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Key and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Validate OTP (string compare)
+        cache_key = key
+        cached_otp = cache.get(cache_key)
+        if cached_otp != otp:
+            return Response({"error": "Invalid key or OTP."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Validate user
+        user = CustomUser.objects.filter(id=user_id).only("id", "is_active", "email", "first_name", "last_name").first()
+        if not user:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Activate if needed
+        if not user.is_active:
+            CustomUser.objects.filter(pk=user.id, is_active=False).update(is_active=True)
+            user.is_active = True
+
+        # Generate tokens
         try:
-            # Validate OTP
-            cache_key = key
-            cached_otp = cache.get(cache_key)
-
-            if cached_otp != otp:
-                return Response(
-                    {"error": "Invalid key or OTP."},
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
-
-            # Validate user
-            user = CustomUser.objects.filter(id=id).first()
-            if not user:
-                return Response(
-                    {"error": "User not found."},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Activate user if needed
-            if not user.is_active:
-                user.is_active = True
-                user.save(update_fields=["is_active"])
-
-            # Generate JWT tokens
-            try:
-                refresh = RefreshToken.for_user(user)
-                access_token = refresh.access_token
-            except Exception as e:
-                logger.error(f"Token generation failed for {user.email}: {str(e)}")
-                return Response(
-                    {"error": "Failed to generate tokens."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-
-            # Build response
-            response = Response(
-                {"message": "OTP verified successfully."},
-                status=status.HTTP_200_OK
-            )
-
-            cookie_settings = {
-                "httponly": True,
-                "secure": True,
-                "samesite": "None",
-            }
-
-            response.set_cookie(
-                key="access",
-                value=str(access_token),
-                max_age=30 * 60,
-                **cookie_settings
-            )
-            response.set_cookie(
-                key="refresh",
-                value=str(refresh),
-                max_age=7 * 24 * 60 * 60,
-                **cookie_settings
-            )
-            cache.delete(cache_key)
-            # Async email sending
-            try:
-                send_login_success_email.delay({
-                    "email": user.email,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                })
-            except Exception as e:
-                logger.warning(f"Email send failed for {user.email}: {str(e)}")
-
-            return response
-
+            access_token, refresh_token = issue_tokens_for_user(user)
         except Exception as e:
-            logger.exception(
-                f"OTP verification failed , Error: {str(e)}"
-            )
-            return Response(
-                {"error": "Something went wrong. Try again later."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.error("Token generation failed for %s: %s", user.email, str(e))
+            return Response({"error": "Failed to generate tokens."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Build response + set cookies
+        response = Response({"message": "OTP verified successfully."}, status=status.HTTP_200_OK)
+        set_auth_cookies(response, access_token, refresh_token)
+
+        # Invalidate OTP
+        cache.delete(cache_key)
+
+        # Async email - best effort
+        try:
+            send_login_success_email.delay({
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            })
+        except Exception as e:
+            logger.warning("Email send failed for %s: %s", user.email, str(e))
+
+        return response
 
 
-# Manual Login View
 class Login_SignUpView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
+        email = request.data.get("email")
         if not email:
-            return Response(
-                {"error": "Email is required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        #  Delete user if it is not active
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Delete non-active stale accounts for same email
         CustomUser.objects.filter(email=email, is_active=False).delete()
+
         try:
-            # ✅ Use get_or_create (1 DB call instead of 2)
+            # get_or_create single round-trip
             user, created = CustomUser.objects.get_or_create(
                 email=email,
                 defaults={"is_active": False},
             )
             status_message = "New User" if created else "Existing User"
 
-            # ✅ Generate & cache OTP
+            # Generate & cache OTP
             otp = generate_otp()
             key = user_key(user=user)
-            cache.set(key, otp, timeout=140)
+            cache.set(key, otp, timeout=OTP_TTL_SECONDS)
 
-            # ✅ Fire async task (non-blocking)
+            # Fire async task (non-blocking)
             try:
                 Otp_Verification.delay({"otp": otp, "email": email})
             except Exception as task_error:
-                logger.warning(f"OTP async task enqueue failed for {email}: {task_error}")
+                logger.warning("OTP async task enqueue failed for %s: %s", email, task_error)
 
-            return Response(
-                {"key": key, "id": user.id, "status": status_message},
-                status=status.HTTP_200_OK
-            )
+            return Response({"key": key, "id": user.id, "status": status_message}, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.exception(f"Login/Signup failed for email={email}: {e}")
-            return Response(
-                {"error": "Something went wrong. Try again later."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.exception("Login/Signup failed for email=%s: %s", email, e)
+            return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# Logout View
+
 class LogoutView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        refresh_token = request.COOKIES.get(REFRESH_COOKIE)
+        if not refresh_token:
+            return Response({"error": "Refresh token missing"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Blacklist refresh token if enabled
         try:
-            refresh_token = request.COOKIES.get('refresh')
-            if not refresh_token:
-                return Response({"error": "Refresh token missing"}, status=status.HTTP_401_UNAUTHORIZED)
-
-            try:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-            except Exception as e:
-                logger.warning(f"Invalid refresh token during logout for user {request.user.email}: {str(e)}")
-                return Response({"error": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
-
-            try:
-                response = Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
-                response.delete_cookie('access')
-                response.delete_cookie('refresh')
-                cache.delete(user_key(user=request.user))
-                return response
-            except Exception as e:
-                logger.exception(f"Error deleting cookies during logout for user {request.user.email}: {str(e)}")
-                return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            token = RefreshToken(refresh_token)
+            token.blacklist()
         except Exception as e:
-            logger.exception(f"Logout failed for user {request.user.email}: {str(e)}")
-            return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.warning("Invalid refresh token during logout for user %s: %s", getattr(request.user, "email", None), str(e))
+            return Response({"error": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Clear cookies + cache key
+        try:
+            response = Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
+            clear_auth_cookies(response)
+            # Clear any OTP cache for this user key (best effort)
+            try:
+                cache.delete(user_key(user=request.user))
+            except Exception:
+                pass
+            return response
+        except Exception as e:
+            logger.exception("Error deleting cookies during logout for user %s: %s", getattr(request.user, "email", None), str(e))
+            return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class Google_Login_SignupView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        token = request.data.get("token")
-        if not token:
+        token_str = request.data.get("token")
+        if not token_str:
             return Response({"error": "Token not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ✅ Verify Google token
+        # Verify Google token (per docs)
         try:
-            idinfo = id_token.verify_oauth2_token(
-                token,
-                Request(),
-                os.environ.get("GOOGLE_CLIENT_ID")
-            )
+            idinfo = id_token.verify_oauth2_token(token_str, Request(), GOOGLE_CLIENT_ID)
         except ValueError:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -213,18 +207,18 @@ class Google_Login_SignupView(APIView):
         if not email:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
-        #  Delete user if it is not active
+        # Delete non-active duplicates on same email
         CustomUser.objects.filter(email=email, is_active=False).delete()
-        # ✅ Blocklist certain users
-        if email in {"forlaptop2626@gmail.com", "mitsuhamitsuha123@gmail.com"}:
+
+        # Blocklist certain users
+        if email in BLOCKLISTED_EMAILS:
             return Response({"error": "User not eligible"}, status=status.HTTP_403_FORBIDDEN)
 
-        first_name = idinfo.get("given_name", "")
-        last_name = idinfo.get("family_name", "")
-        profile_pic = idinfo.get("picture", "")
+        first_name = idinfo.get("given_name", "") or ""
+        last_name = idinfo.get("family_name", "") or ""
+        profile_pic = idinfo.get("picture", "") or ""
 
         try:
-            # ✅ One query: get_or_create
             user, created = CustomUser.objects.get_or_create(
                 email=email,
                 defaults={
@@ -234,10 +228,9 @@ class Google_Login_SignupView(APIView):
                     "is_active": True,
                 },
             )
-
             status_message = "New User" if created else "Existing User"
 
-            # ✅ Update fields if changed (bulk)
+            # Apply differential updates
             updates = {}
             if user.first_name != first_name:
                 updates["first_name"] = first_name
@@ -248,35 +241,22 @@ class Google_Login_SignupView(APIView):
 
             if updates:
                 CustomUser.objects.filter(pk=user.pk).update(**updates)
-
         except Exception as e:
-            logger.exception(f"User fetch/create failed for {email}: {e}")
+            logger.exception("User fetch/create failed for %s: %s", email, e)
             return Response({"error": "User creation failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # ✅ Generate tokens
+        # Generate tokens
         try:
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
+            access_token, refresh_token = issue_tokens_for_user(user)
         except Exception as e:
-            logger.error(f"JWT generation failed for {email}: {e}")
+            logger.error("JWT generation failed for %s: %s", email, e)
             return Response({"error": "Failed to generate tokens"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # ✅ Prepare response with cookies
-        response = Response(
-            {"message": "Login Successful", "status": status_message},
-            status=status.HTTP_200_OK,
-        )
+        # Response with cookies
+        response = Response({"message": "Login Successful", "status": status_message}, status=status.HTTP_200_OK)
+        set_auth_cookies(response, access_token, refresh_token)
 
-        cookie_settings = {
-            "httponly": True,
-            "secure": True,
-            "samesite": "None",
-        }
-
-        response.set_cookie("access", str(access_token), max_age=30 * 60, **cookie_settings)
-        response.set_cookie("refresh", str(refresh), max_age=7 * 24 * 60 * 60, **cookie_settings)
-
-        # ✅ Fire async email task (don’t block request)
+        # Fire async email task (best effort)
         try:
             send_login_success_email.delay({
                 "email": user.email,
@@ -284,12 +264,10 @@ class Google_Login_SignupView(APIView):
                 "last_name": user.last_name,
             })
         except Exception as e:
-            logger.warning(f"Async email enqueue failed for {email}: {e}")
+            logger.warning("Async email enqueue failed for %s: %s", email, e)
 
         return response
-    
 
-# Set the user other details
 
 class SetUsersDetail(APIView):
     authentication_classes = [CookieJWTAuthentication]
@@ -297,82 +275,71 @@ class SetUsersDetail(APIView):
 
     def post(self, request):
         try:
-            user = request.user  
+            user = request.user
 
             # Extract fields
             first_name = request.data.get("first_name")
             last_name = request.data.get("last_name")
             mobile_number = request.data.get("mobile_number")
-            profile_pic = request.data.get("profile_pic")  
+            profile_pic = request.data.get("profile_pic")
 
-            # Update fields if provided
-            if first_name:
+            # Update conditionally to avoid unnecessary writes
+            changed = False
+            if first_name and user.first_name != first_name:
                 user.first_name = first_name
-            if last_name:
+                changed = True
+            if last_name and user.last_name != last_name:
                 user.last_name = last_name
-            if mobile_number:
+                changed = True
+            if mobile_number and user.mobile_number != mobile_number:
                 user.mobile_number = mobile_number
-            if profile_pic:
+                changed = True
+            if profile_pic and user.profile_pic != profile_pic:
                 user.profile_pic = profile_pic
+                changed = True
 
-            user.save()
+            if changed:
+                user.save(update_fields=["first_name", "last_name", "mobile_number", "profile_pic"])
 
-            return Response(
-                {"message": "User details updated successfully"},
-                status=status.HTTP_200_OK,
-            )
+            return Response({"message": "User details updated successfully"}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logger.exception(f"User update failed: {e}")
-            return Response(
-                {"error": "User update failed"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        
-# resend otp
+            logger.exception("User update failed: %s", e)
+            return Response({"error": "User update failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class ResendOtpView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        id = request.data.get('id')
-        if not id:
-            return Response(
-                {"error": "ID is required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        key = request.data.get('key')
-        cache.delete(key)  
+        user_id = request.data.get("id")
+        if not user_id:
+            return Response({"error": "ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Delete prior OTP if provided key present
+        key = request.data.get("key")
+        if key:
+            cache.delete(key)
+
         try:
-            user = CustomUser.objects.filter(id=id).first()
+            user = CustomUser.objects.filter(id=user_id).only("id", "email", "is_active").first()
             if not user:
-                return Response(
-                    {"error": "User not found."},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+                return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
             if user.is_active:
-                return Response(
-                    {"error": "User is already active."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"error": "User is already active."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # ✅ Generate & cache OTP
+            # Generate & cache OTP
             otp = generate_otp()
-            key = user_key(user=user)
-            cache.set(key, otp, timeout=140)
+            new_key = user_key(user=user)
+            cache.set(new_key, otp, timeout=OTP_TTL_SECONDS)
 
-            # ✅ Fire async task (non-blocking)
+            # Fire async task
             try:
                 Otp_Verification.delay({"otp": otp, "email": user.email})
             except Exception as task_error:
-                logger.warning(f"OTP async task enqueue failed for {user.email}: {task_error}")
+                logger.warning("OTP async task enqueue failed for %s: %s", user.email, task_error)
 
-            return Response(
-                {"key": key, "id": user.id},
-                status=status.HTTP_200_OK
-            )
+            return Response({"key": new_key, "id": user.id}, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.exception(f"Resend OTP failed for email={user.email}: {e}")
-            return Response(
-                {"error": "Something went wrong. Try again later."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.exception("Resend OTP failed for id=%s: %s", user_id, e)
+            return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
