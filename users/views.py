@@ -30,8 +30,6 @@ ACCESS_MAX_AGE = 30 * 60                 # 30 minutes
 REFRESH_MAX_AGE = 7 * 24 * 60 * 60       # 7 days
 OTP_TTL_SECONDS = 140
 
-BLOCKLISTED_EMAILS = {"forlaptop2626@gmail.com", "mitsuhamitsuha123@gmail.com"}
-
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 
 
@@ -209,10 +207,6 @@ class Google_Login_SignupView(APIView):
 
         # Delete non-active duplicates on same email
         CustomUser.objects.filter(email=email, is_active=False).delete()
-
-        # Blocklist certain users
-        if email in BLOCKLISTED_EMAILS:
-            return Response({"error": "User not eligible"}, status=status.HTTP_403_FORBIDDEN)
 
         first_name = idinfo.get("given_name", "") or ""
         last_name = idinfo.get("family_name", "") or ""
