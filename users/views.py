@@ -91,7 +91,7 @@ class OtpVerificationView(APIView):
                 max_age=7 * 24 * 60 * 60,
                 **cookie_settings
             )
-
+            cache.delete(cache_key)
             # Async email sending
             try:
                 send_login_success_email.delay({
@@ -325,4 +325,52 @@ class SetUsersDetail(APIView):
             return Response(
                 {"error": "User update failed"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
+# resend otp
+class ResendOtpView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        id = request.data.get('id')
+        if not id:
+            return Response(
+                {"error": "ID is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        key = request.data.get('key')
+        cache.delete(key)  
+        try:
+            user = CustomUser.objects.filter(id=id).first()
+            if not user:
+                return Response(
+                    {"error": "User not found."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            if user.is_active:
+                return Response(
+                    {"error": "User is already active."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # ✅ Generate & cache OTP
+            otp = generate_otp()
+            key = user_key(user=user)
+            cache.set(key, otp, timeout=140)
+
+            # ✅ Fire async task (non-blocking)
+            try:
+                Otp_Verification.delay({"otp": otp, "email": user.email})
+            except Exception as task_error:
+                logger.warning(f"OTP async task enqueue failed for {user.email}: {task_error}")
+
+            return Response(
+                {"key": key, "id": user.id},
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            logger.exception(f"Resend OTP failed for email={user.email}: {e}")
+            return Response(
+                {"error": "Something went wrong. Try again later."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
