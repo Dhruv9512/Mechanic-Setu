@@ -113,7 +113,7 @@ class MeApiView(APIView):
     def get(self, request):
         user = request.user
         logger.info("User data requested: %s", getattr(user, "username", None))
-        return Response({"username": user.username}, status=HTTP_200)
+        return Response({"username": user.id}, status=HTTP_200)
 
 
 class ExpiredCleanupView(APIView):
