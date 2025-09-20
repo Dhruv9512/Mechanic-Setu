@@ -12,7 +12,7 @@ import os
 from google.auth.transport.requests import Request
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
-from .authentication import CookieJWTAuthentication
+from .authentication import CookieJWTAuthentication, user_key
 
 
 import logging
@@ -23,28 +23,28 @@ class OtpVerificationView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
+        key = request.data.get('key')
         otp = request.data.get('otp')
-
-        if not email or not otp:
+        id = request.data.get('id')
+        if not key or not otp:
             return Response(
-                {"error": "Email and OTP are required."},
+                {"error": "Key and OTP are required."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
             # Validate OTP
-            cache_key = f"otp_{email}"
+            cache_key = key
             cached_otp = cache.get(cache_key)
 
             if cached_otp != otp:
                 return Response(
-                    {"error": "Invalid email or OTP."},
+                    {"error": "Invalid key or OTP."},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
 
             # Validate user
-            user = CustomUser.objects.filter(email=email).first()
+            user = CustomUser.objects.filter(id=id).first()
             if not user:
                 return Response(
                     {"error": "User not found."},
@@ -106,7 +106,7 @@ class OtpVerificationView(APIView):
 
         except Exception as e:
             logger.exception(
-                f"OTP verification failed for email: {email}, Error: {str(e)}"
+                f"OTP verification failed , Error: {str(e)}"
             )
             return Response(
                 {"error": "Something went wrong. Try again later."},
@@ -136,19 +136,19 @@ class Login_SignUpView(APIView):
 
             # ✅ Generate & cache OTP
             otp = generate_otp()
-            cache.set(f"otp_{email}", otp, timeout=300)
+            key = user_key(user=user)
+            cache.set(key, otp, timeout=140)
 
             # ✅ Fire async task (non-blocking)
             try:
-                Otp_Verification.delay({"otp": otp, "email": email, "status": status_message})
+                Otp_Verification.delay({"otp": otp, "email": email})
             except Exception as task_error:
                 logger.warning(f"OTP async task enqueue failed for {email}: {task_error}")
 
             return Response(
-                {"Email": email, "Status": status_message},
+                {"key": key, "id": user.id, "status": status_message},
                 status=status.HTTP_200_OK
             )
-
         except Exception as e:
             logger.exception(f"Login/Signup failed for email={email}: {e}")
             return Response(
