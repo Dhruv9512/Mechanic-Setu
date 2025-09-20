@@ -213,6 +213,8 @@ class Google_Login_SignupView(APIView):
         if not email:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
+        #  Delete user if it is not active
+        CustomUser.objects.filter(email=email, is_active=False).delete()
         # ✅ Blocklist certain users
         if email in {"forlaptop2626@gmail.com", "mitsuhamitsuha123@gmail.com"}:
             return Response({"error": "User not eligible"}, status=status.HTTP_403_FORBIDDEN)
