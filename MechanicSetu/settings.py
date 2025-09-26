@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-import ssl
 import os
 import dj_database_url
 from datetime import timedelta
@@ -31,11 +30,10 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = ["mechanic-setu.onrender.com","mechanicsetu.netlify.app","localhost", "172.20.10.4","127.0.0.1"]
+ALLOWED_HOSTS = ["mechanic-setu.onrender.com","mechanicsetu.netlify.app","localhost", "172.20.10.4","127.0.0.1","setu-partner.netlify.app"]
 
 
 # Application definition
-
 INSTALLED_APPS = [
     'jet',
     "users",
@@ -85,15 +83,6 @@ CHANNEL_LAYERS = {
     }
 }
 
-
-
-EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
-EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
-EMAIL_PORT = config("EMAIL_PORT", default=587)
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -105,10 +94,10 @@ CELERY_TASK_EAGER_PROPAGATES = True
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),      # short-lived access token
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),         # long-lived refresh token
-    'ROTATE_REFRESH_TOKENS': True,                       # issue new refresh token on refresh
-    'BLACKLIST_AFTER_ROTATION': True,                    # invalidate old refresh tokens
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),      
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),        
+    'ROTATE_REFRESH_TOKENS': True,                       
+    'BLACKLIST_AFTER_ROTATION': True,                    
 }
 
 ROOT_URLCONF = "MechanicSetu.urls"
@@ -194,13 +183,13 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # ----------------------
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="https://mechanicsetu.netlify.app,https://mechanic-setu.onrender.com,http://172.20.10.4:5173,http://localhost:5173",
+    default="https://mechanicsetu.netlify.app,https://mechanic-setu.onrender.com,http://172.20.10.4:5173,http://localhost:5173,https://setu-partner.netlify.app",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="https://mechanicsetu.netlify.app,http://172.20.10.4:5173,http://localhost:5173",
+    default="https://mechanicsetu.netlify.app,http://172.20.10.4:5173,http://localhost:5173,https://mechanic-setu.onrender.com,https://setu-partner.netlify.app",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 

@@ -12,11 +12,13 @@ from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 
 from .authentication import generate_otp, user_key, CookieJWTAuthentication
-from .tasks import Otp_Verification, send_login_success_email
-from .models import CustomUser
+from .tasks import Otp_Verification, send_login_success_email,Send_Mechanic_Login_Successful_Email,Send_Mechanic_Otp_Verification
+from .models import CustomUser, Mechanic
 
 import logging
 import os
+
+from .serializers import MechanicSerializer, UserSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -108,11 +110,18 @@ class OtpVerificationView(APIView):
 
         # Async email - best effort
         try:
-            send_login_success_email.delay({
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-            })
+            if user.is_mechanic:
+                Send_Mechanic_Login_Successful_Email.delay({
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                })
+            else:
+                send_login_success_email.delay({
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                })
         except Exception as e:
             logger.warning("Email send failed for %s: %s", user.email, str(e))
 
@@ -145,7 +154,10 @@ class Login_SignUpView(APIView):
 
             # Fire async task (non-blocking)
             try:
-                Otp_Verification.delay({"otp": otp, "email": email})
+                if user.is_mechanic:
+                    Send_Mechanic_Otp_Verification.delay({"otp": otp, "email": user.email})
+                else:
+                    Otp_Verification.delay({"otp": otp, "email": user.email})
             except Exception as task_error:
                 logger.warning("OTP async task enqueue failed for %s: %s", email, task_error)
 
@@ -252,11 +264,18 @@ class Google_Login_SignupView(APIView):
 
         # Fire async email task (best effort)
         try:
-            send_login_success_email.delay({
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-            })
+            if user.is_mechanic:
+                Send_Mechanic_Login_Successful_Email.delay({
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                })
+            else:
+                send_login_success_email.delay({
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                })
         except Exception as e:
             logger.warning("Async email enqueue failed for %s: %s", email, e)
 
@@ -329,7 +348,10 @@ class ResendOtpView(APIView):
 
             # Fire async task
             try:
-                Otp_Verification.delay({"otp": otp, "email": user.email})
+                if user.is_mechanic:
+                    Send_Mechanic_Otp_Verification.delay({"otp": otp, "email": user.email})
+                else:
+                    Otp_Verification.delay({"otp": otp, "email": user.email})
             except Exception as task_error:
                 logger.warning("OTP async task enqueue failed for %s: %s", user.email, task_error)
 
@@ -337,3 +359,44 @@ class ResendOtpView(APIView):
         except Exception as e:
             logger.exception("Resend OTP failed for id=%s: %s", user_id, e)
             return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+# ---------------------------Mechanic Views---------------------------
+class SetMechanicDetailView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        first_name = request.data.get("first_name")
+        last_name = request.data.get("last_name")
+        mobile_number = request.data.get("mobile_number")
+        profile_pic = request.data.get("profile_pic")
+        shop_name = request.data.get("shop_name")
+        shop_address = request.data.get("shop_address")
+        shop_latitude = request.data.get("shop_latitude")
+        shop_longitude = request.data.get("shop_longitude")
+
+        user_serializer = UserSerializer(data={
+            "first_name": first_name,
+            "last_name": last_name,
+            "mobile_number": mobile_number,
+            "profile_pic": profile_pic
+        })
+
+        if user_serializer.is_valid():
+            CustomUser.objects.filter(pk=user.pk).update(**user_serializer.validated_data)
+        else:
+            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        mechanic_serializer = MechanicSerializer(data={
+                "shop_name": shop_name,
+                "shop_address": shop_address,
+                "shop_latitude": shop_latitude,
+                "shop_longitude": shop_longitude
+            })
+        mechanic, created = Mechanic.objects.get_or_create(user=user, defaults=mechanic_serializer.validated_data)
+        if created:
+            return Response({"message": "Mechanic profile created successfully"}, status=status.HTTP_201_CREATED)
+       

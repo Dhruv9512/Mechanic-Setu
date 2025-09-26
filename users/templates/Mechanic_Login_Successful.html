@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTP Verification</title>
+    <title>Login Notification</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #dadada; color: #333333; line-height: 1.6;">
     <div style="max-width: 1000px; margin: 0 auto; padding: 20px;">
-        <!-- OTP Verification Template -->
-       <div style="width: 100%; max-width: 480px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); margin: 0 auto 30px;">
+        <!-- Setu Partner Login Successful Template -->
+        <div style="width: 100%; max-width: 480px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); margin: 0 auto 30px;">
             <div style="width: 100%;">
                 <div style="background: #6c63ff; padding: 25px 30px; text-align: center; color: #ffffff; position: relative;">
                     <div style="display: table; margin: 0 auto; margin-bottom: 10px;">
@@ -21,41 +21,31 @@
                             </div>
                         </div>
                         <div style="display: table-cell; vertical-align: middle; text-align: left;">
-                            <div style="font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">Mechanic Setu</div>
+                            <div style="font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">Setu Partner</div>
                             <div style="font-size: 14px; opacity: 0.9; font-weight: 300;">Always at emergency</div>
                         </div>
                     </div>
                 </div>
                 
-
-                
                 <div style="padding: 35px 30px;">
-                    <h2 style="color: #6c63ff; font-size: 22px; font-weight: 600; margin-bottom: 20px;">Hello,</h2>
+                    <h2 style="color: #6c63ff; font-size: 22px; font-weight: 600; margin-bottom: 20px;">Hello {{ first_name }} {{ last_name }},</h2>
                     
-                    <p style="margin-bottom: 25px; font-size: 16px; color: #444444;">We received a request to verify your account with <strong>Mechanic Setu</strong>.</p>
-                    
-                    <p style="margin-bottom: 25px; font-size: 16px; color: #444444;">Your One-Time Password (OTP) is:</p>
-                    
-                    <div style="background-color: #f8f9ff; border: 2px dashed #6c63ff; padding: 20px; margin: 25px 0; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 32px; font-weight: 700; color: #6c63ff; letter-spacing: 5px;">{{ otp }}</div>
-                    </div>
+                    <p style="margin-bottom: 25px; font-size: 16px; color: #444444;">This is a confirmation that you have successfully logged into your <strong>Setu Partner Dashboard</strong>.</p>
                     
                     <div style="background-color: #f8f9ff; border-left: 4px solid #6c63ff; padding: 15px 20px; margin: 25px 0; border-radius: 0 4px 4px 0;">
-                        <p style="margin: 0; font-size: 14px;">This OTP is valid for <strong style="color: #6c63ff;">10 minutes</strong>. Please do not share it with anyone.</p>
+                        <p style="margin: 0;">You can now manage your availability, view pending requests, and connect with customers. Remember to set your status to 'Online' to start receiving jobs.</p>
                     </div>
-                    
-                    <p style="margin-bottom: 25px; font-size: 16px; color: #444444;">If you did not request this, you can safely ignore this email.</p>
-                    
+                  
                     <div style="height: 1px; background: #e0e0e0; margin: 30px 0;"></div>
                     
-                    <p style="margin-bottom: 25px; font-size: 16px; color: #444444;">Need help or have questions? Our support team is here for you 24/7.</p>
+                    <p style="margin-bottom: 25px; font-size: 16px; color: #444444;">If this login was you, no further action is needed. If you did not initiate this login, please secure your account immediately.</p>
                 </div>
                 
                 <div style="padding: 20px 30px; text-align: center; background: #f8f9fa; color: #888888; font-size: 13px;">
-                    <p>Best regards,<br><strong>Team Mechanic Setu</strong></p>
+                    <p>Best regards,<br><strong>Team Setu Partner</strong></p>
                     
                     <p style="margin-top: 20px; font-size: 12px; color: #aaaaaa;">
-                        © {{ year }} Mechanic Setu. All rights reserved.
+                        © {{ year }} Setu Partner. All rights reserved.
                     </p>
                 </div>
             </div>
@@ -63,3 +53,4 @@
     </div>
 </body>
 </html>
+
