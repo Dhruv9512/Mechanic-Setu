@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # It's best practice to define your "from" email here or get it from a specific env var.
 # This email MUST be a verified sender in your Brevo account.
-DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
+DEFAULT_FROM_EMAIL = os.environ.get('BREVO_SENDER_EMAIL')
 
 # Configure the Brevo API client
 configuration = sib_api_v3_sdk.Configuration()
