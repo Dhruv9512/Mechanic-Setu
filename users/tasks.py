@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 
 # It's best practice to define your "from" email here or get it from a specific env var.
 # This email MUST be a verified sender in your Brevo account.
-DEFAULT_FROM_EMAIL = os.environ.get('BREVO_SENDER_EMAIL')
+DEFAULT_FROM_EMAIL = os.getenv('BREVO_SENDER_EMAIL')
 
 # Configure the Brevo API client
 configuration = sib_api_v3_sdk.Configuration()
-brevo_api_key = os.environ.get('BREVO_API_KEY')
+brevo_api_key = os.getenv('BREVO_API_KEY')
 # 🚨 START: TEMPORARY DEBUGGING CODE 🚨
 if brevo_api_key:
     logger.info(f"Found BREVO_API_KEY. Starts with: {brevo_api_key[:4]} and ends with {brevo_api_key[-4:]}")
