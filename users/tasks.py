@@ -18,6 +18,12 @@ DEFAULT_FROM_EMAIL = os.environ.get('BREVO_SENDER_EMAIL')
 # Configure the Brevo API client
 configuration = sib_api_v3_sdk.Configuration()
 brevo_api_key = os.environ.get('BREVO_API_KEY')
+# 🚨 START: TEMPORARY DEBUGGING CODE 🚨
+if brevo_api_key:
+    logger.info(f"Found BREVO_API_KEY. Starts with: {brevo_api_key[:4]} and ends with {brevo_api_key[-4:]}")
+else:
+    logger.error("BREVO_API_KEY environment variable is NOT FOUND.")
+# 🚨 END: TEMPORARY DEBUGGING CODE 🚨
 if not brevo_api_key:
     logger.critical("FATAL: BREVO_API_KEY environment variable not found. Email sending will fail.")
 else:
