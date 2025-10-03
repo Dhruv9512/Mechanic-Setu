@@ -313,7 +313,7 @@ class SetMechanicDetailView(APIView):
 
         # 2. Validate the mechanic-specific details (shop_name, etc.)
         Data= request.data
-        profile_pic = Data.get('profile_pic')
+        profile_pic = request.FILES.get('profile_pic')
         if profile_pic:
             blob = put(f"Mechanic Profile/{profile_pic}", profile_pic.read())
             url = blob["url"]
