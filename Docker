@@ -36,4 +36,4 @@ EXPOSE 8000
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Run your application via the entrypoint script
-CMD ["/app/entry-point.sh"]
+CMD ["/app/entrypoint.sh"]
