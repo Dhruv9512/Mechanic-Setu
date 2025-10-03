@@ -1,39 +1,39 @@
-# Use Miniconda as the base image
-FROM continuumio/miniconda3
+# Use a slim, official Python image for a smaller and faster build
+FROM python:3.10-slim-bookworm
+
+# Set environment variables for Python
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Install system dependencies AND APPLY SECURITY UPGRADES
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    libmariadb-dev \
+    libmariadb-dev-compat \
+    tini \
+    # Clean up apt cache to keep the image small
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /app
 
-# Copy environment.yml into the container
-COPY environment.yml /app/
+# Copy and install Python requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Create the Conda environment AND clean it up in the same step
-# This reduces the size of the final Docker image layer
-RUN conda env create -f /app/environment.yml && \
-    conda clean -a -y
+# Copy the rest of your application code
+COPY . .
 
-# Set environment variables to activate the Conda environment
-ENV PATH /opt/conda/envs/myenv/bin:$PATH
-ENV DEBIAN_FRONTEND=noninteractive
+# Ensure your startup script is executable
+COPY entry-point.sh /app/entry-point.sh
+RUN chmod +x /app/entry-point.sh
 
-# Ensure Conda is properly initialized in non-interactive shells
-RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
-
-# Activate Conda in the image
-SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
-
-# Copy the application code
-COPY . /app/
-
-# Ensure entrypoint script is copied and executable
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
-# Expose the port Django runs on
+# Expose the port your application runs on
 EXPOSE 8000
 
-# Use tini as the entrypoint for better process management
+# Use tini for proper process management
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Run your application via the entrypoint script
-CMD ["/app/entrypoint.sh"]
+CMD ["/app/entry-point.sh"]
