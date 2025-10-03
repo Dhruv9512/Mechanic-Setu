@@ -385,13 +385,18 @@ class SetMechanicDetailView(APIView):
             mobile_number=mobile_number,
             profile_pic=profile_pic,
         )
-    
+
+        
         mechanic_serializer = MechanicSerializer(data={
                 "shop_name": shop_name,
                 "shop_address": shop_address,
                 "shop_latitude": shop_latitude,
                 "shop_longitude": shop_longitude
             })
+
+        if not mechanic_serializer.is_valid():
+            return Response(mechanic_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         mechanic, created = Mechanic.objects.get_or_create(user=user, defaults=mechanic_serializer.validated_data)
         if created:
             return Response({"message": "Mechanic profile created successfully"}, status=status.HTTP_201_CREATED)
