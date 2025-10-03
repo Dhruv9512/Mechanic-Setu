@@ -3,7 +3,8 @@ set -e  # Exit immediately if a command exits with a non-zero status
 
 # ✅ Activate Conda environment
 echo "Activating Conda environment..."
-conda run --no-capture-output -n myenv python -c "print('Conda environment activated.')"
+source /opt/conda/etc/profile.d/conda.sh
+conda activate myenv
 
 # ✅ Wait for the database to become available
 echo "Waiting for database to be ready..."
