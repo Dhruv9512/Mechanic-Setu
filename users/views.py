@@ -19,7 +19,8 @@ from .models import CustomUser, Mechanic
 import logging
 import os
 from django.template.loader import render_to_string
-from weasyprint import HTML
+from io import BytesIO 
+from xhtml2pdf import pisa 
 
 # --- IMPORT THE NEW SERIALIZERS ---
 from .serializers import (
@@ -352,35 +353,38 @@ class SetMechanicDetailView(APIView):
         )
 
          # --- START: PDF GENERATION LOGIC ---
+         # --- START: UPDATED PDF GENERATION LOGIC for xhtml2pdf ---
         try:
-            # 5. Prepare context for the PDF template
+            # 1. Prepare context (same as before)
             context = {
                 'user': user,
                 'mechanic': mechanic,
                 'timestamp': timezone.now().strftime("%Y-%m-%d %H:%M:%S")
             }
-            # 6. Render the HTML template to a string
+            # 2. Render the HTML template to a string (same as before)
             html_string = render_to_string('mechanic_agreement.html', context)
             
-            # 7. Generate PDF in memory
-            pdf_bytes = HTML(string=html_string).write_pdf()
+            # 3. Generate PDF in memory
+            result = BytesIO() # Create an in-memory binary file
+            pdf = pisa.CreatePDF(BytesIO(html_string.encode("UTF-8")), dest=result)
 
-            # 8. Upload the generated PDF
-            pdf_path = f"Mechanic Agreements/agreement-{user.id}-{mechanic.id}.pdf"
-            pdf_blob = put(pdf_path, pdf_bytes)
-            pdf_url = pdf_blob.get("url")
+            if not pdf.err:
+                # 4. Upload the generated PDF
+                pdf_path = f"Mechanic Agreements/agreement-{user.id}-{mechanic.id}.pdf"
+                # Use result.getvalue() to get the byte content of the PDF
+                pdf_blob = put(pdf_path, result.getvalue())
+                pdf_url = pdf_blob.get("url")
 
-            # 9. Save the PDF URL to the mechanic's profile
-            mechanic.KYC_document = pdf_url
-            mechanic.save(update_fields=['KYC_document'])
-
-            logger.info(f"Successfully generated and saved agreement for mechanic {mechanic.id}")
+                # 5. Save the PDF URL to the mechanic's profile
+                mechanic.agreement_document = pdf_url
+                mechanic.save(update_fields=['agreement_document'])
+                logger.info(f"Successfully generated agreement for mechanic {mechanic.id} with xhtml2pdf")
+            else:
+                logger.error(f"xhtml2pdf error for mechanic {mechanic.id}: {pdf.err}")
 
         except Exception as e:
-            # Log an error if PDF generation fails, but don't fail the whole request
             logger.error(f"Failed to generate agreement PDF for mechanic {mechanic.id}: {e}")
-        # --- END: PDF GENERATION LOGIC ---
-
+        # --- END: UPDATED PDF GENERATION LOGIC ---
 
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         message = "Mechanic profile created successfully." if created else "Mechanic profile updated successfully."
