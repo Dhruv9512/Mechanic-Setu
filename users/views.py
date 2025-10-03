@@ -364,6 +364,7 @@ class ResendOtpView(APIView):
 
 
 # ---------------------------Mechanic Views---------------------------
+# ---------------------------Mechanic Views---------------------------
 class SetMechanicDetailView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -373,23 +374,18 @@ class SetMechanicDetailView(APIView):
         first_name = request.data.get("first_name")
         last_name = request.data.get("last_name")
         mobile_number = request.data.get("mobile_number")
-        profile_pic = request.data.get("profile_pic")
+        profile_pic = request.FILES.get("profile_pic")
         shop_name = request.data.get("shop_name")
         shop_address = request.data.get("shop_address")
         shop_latitude = request.data.get("shop_latitude")
         shop_longitude = request.data.get("shop_longitude")
 
-        user_serializer = UserSerializer(data={
-            "first_name": first_name,
-            "last_name": last_name,
-            "mobile_number": mobile_number,
-            "profile_pic": profile_pic
-        })
-
-        if user_serializer.is_valid():
-            CustomUser.objects.filter(pk=user.pk).update(**user_serializer.validated_data)
-        else:
-            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        CustomUser.objects.filter(pk=user.pk).update(first_name=first_name,
+            last_name=last_name,
+            mobile_number=mobile_number,
+            profile_pic=profile_pic,
+        )
+    
         mechanic_serializer = MechanicSerializer(data={
                 "shop_name": shop_name,
                 "shop_address": shop_address,
