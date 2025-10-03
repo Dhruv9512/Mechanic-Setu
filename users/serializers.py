@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from .models import Mechanic, ServiceRequest, CustomUser
 
+
+
+# This serializer is used to expose user information in other serializers and in login/signup views.
 class UserSerializer(serializers.ModelSerializer):
     """
     Serializer for the CustomUser model.
@@ -11,6 +14,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'email', 'first_name', 'last_name', 'mobile_number', 'profile_pic', 'is_mechanic']
 
 
+
+
+# This serializer is used to expose mechanic information in other serializers and views.
 class MechanicSerializer(serializers.ModelSerializer):
     """
     Serializer for the Mechanic model.
@@ -28,6 +34,37 @@ class MechanicSerializer(serializers.ModelSerializer):
         ]
 
 
+# This set the user details
+class SetUsersDetailsSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating user details.
+    This serializer is specifically designed to allow users to update their own profile information.
+    It excludes fields that should not be user-editable, such as 'is_mechanic' and 'id'.
+    """
+    class Meta:
+        model = CustomUser
+        # Only allow updating of certain fields to maintain data integrity and security.
+        fields = ['first_name', 'last_name', 'mobile_number', 'profile_pic']
+        read_only_fields = ['id', 'email', 'is_mechanic']
+
+
+
+# This serializer set the mechanic details
+class SetMechanicDetailViewSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating mechanic details.
+    This serializer allows mechanics to update their shop information and status.
+    It excludes fields that should not be user-editable, such as 'id' and 'user'.
+    """
+    class Meta:
+        model = Mechanic
+        # Only allow updating of certain fields to maintain data integrity and security.
+        fields = ['shop_name', 'shop_address', 'shop_latitude', 'shop_longitude', 'status']
+        read_only_fields = ['id', 'user']
+
+        
+
+# This serializer is used to expose service request information in other serializers and views.
 class ServiceRequestSerializer(serializers.ModelSerializer):
     """
     Serializer for the ServiceRequest model.

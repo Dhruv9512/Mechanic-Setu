@@ -45,7 +45,7 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     profile_pic = models.CharField(max_length=500, blank=True, null=True, default="")
     mobile_number = PhoneNumberField(blank=True, null=True, region="IN")
-    is_mechanic = models.BooleanField(default=False)
+    
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []  # No extra fields required for createsuperuser command
 

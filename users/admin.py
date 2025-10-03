@@ -24,7 +24,7 @@ class CustomUserAdmin(UserAdmin):
     """
     inlines = (MechanicProfileInline,)
     list_display = (
-        "id", "email", "mobile_number", "is_mechanic", "profile_pic", "first_name",
+        "id", "email", "mobile_number", "profile_pic", "first_name",
         "last_name", "is_staff", "is_mechanic_verified"
     )
     list_filter = ("is_staff", "is_active", "is_superuser")
@@ -34,7 +34,7 @@ class CustomUserAdmin(UserAdmin):
     # Field layout for the user detail/edit page
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal Info", {"fields": ("first_name", "last_name", "mobile_number", "is_mechanic", "profile_pic")}),
+        ("Personal Info", {"fields": ("first_name", "last_name", "mobile_number", "profile_pic")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important Dates", {"fields": ("last_login", "date_joined")}),
     )
@@ -43,7 +43,7 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
-            "fields": ("email", "mobile_number", "is_mechanic", "profile_pic", "password", "is_staff", "is_active"),
+            "fields": ("email", "mobile_number", "profile_pic", "password", "is_staff", "is_active"),
         }),
     )
     list_select_related = ('mechanic_profile',)
@@ -77,6 +77,7 @@ class MechanicAdmin(admin.ModelAdmin):
         """Admin action to bulk-verify mechanics in one click."""
         count = queryset.update(is_verified=True)
         self.message_user(request, f"{count} mechanics were successfully verified.")
+
 
 
 @admin.register(ServiceRequest)
