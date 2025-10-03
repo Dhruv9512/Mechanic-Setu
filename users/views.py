@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.cache import cache
+from pytz import timezone
 from requests import put
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -17,6 +18,8 @@ from .models import CustomUser, Mechanic
 
 import logging
 import os
+from django.template.loader import render_to_string
+from weasyprint import HTML
 
 # --- IMPORT THE NEW SERIALIZERS ---
 from .serializers import (
@@ -245,6 +248,7 @@ class SetUsersDetail(APIView):
         Handles updating user profile details using a serializer.
         This approach replaces manual field checking with robust validation.
         """
+
         user = request.user
         # `partial=True` allows for updating only a subset of fields.
         serializer = SetUsersDetailsSerializer(user, data=request.data, partial=True)
@@ -292,7 +296,6 @@ class ResendOtpView(APIView):
 
 
 # ---------------------------Mechanic Views---------------------------
-# --- REFACTORED VIEW ---
 class SetMechanicDetailView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -312,16 +315,22 @@ class SetMechanicDetailView(APIView):
         user_serializer.save()
 
         # 2. Validate the mechanic-specific details (shop_name, etc.)
-        Data= request.data
-        profile_pic = Data.pop('profile_pic', None)
-        if profile_pic:
-            blob = put(f"Mechanic Profile/{profile_pic}", profile_pic.read())
-            url = blob["url"]
-            profile_pic = url
-        first_name = Data.pop('first_name', None)
-        last_name = Data.pop('last_name', None)
-        mobile_number = Data.pop('mobile_number', None)
+        mutable_data = request.data.copy()
 
+        # 1. Handle profile picture upload
+        profile_pic = request.FILES.get('profile_pic')
+        if profile_pic:
+            try:
+                path = f"Mechanic Profile/{profile_pic.name}"
+                blob = put(path, profile_pic.read())
+                mutable_data['profile_pic'] = blob["url"]
+            except Exception as e:
+                logger.error(f"File upload failed: {e}")
+                return Response({"error": "File upload failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        first_name = mutable_data.pop('first_name', None)
+        last_name = mutable_data.pop('last_name', None)
+        mobile_number = mutable_data.pop('mobile_number', None)
+    
         user_serializer = SetUsersDetailsSerializer(user, data={
             "first_name": first_name or user.first_name,
             "last_name": last_name or user.last_name,
@@ -332,7 +341,7 @@ class SetMechanicDetailView(APIView):
             return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         user_serializer.save()
 
-        mechanic_serializer = SetMechanicDetailViewSerializer(data=Data)
+        mechanic_serializer = SetMechanicDetailViewSerializer(data=mutable_data, partial=True)
         if not mechanic_serializer.is_valid():
             return Response(mechanic_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
@@ -342,22 +351,40 @@ class SetMechanicDetailView(APIView):
             defaults=mechanic_serializer.validated_data
         )
 
+         # --- START: PDF GENERATION LOGIC ---
+        try:
+            # 5. Prepare context for the PDF template
+            context = {
+                'user': user,
+                'mechanic': mechanic,
+                'timestamp': timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            # 6. Render the HTML template to a string
+            html_string = render_to_string('mechanic_agreement.html', context)
+            
+            # 7. Generate PDF in memory
+            pdf_bytes = HTML(string=html_string).write_pdf()
+
+            # 8. Upload the generated PDF
+            pdf_path = f"Mechanic Agreements/agreement-{user.id}-{mechanic.id}.pdf"
+            pdf_blob = put(pdf_path, pdf_bytes)
+            pdf_url = pdf_blob.get("url")
+
+            # 9. Save the PDF URL to the mechanic's profile
+            mechanic.KYC_document = pdf_url
+            mechanic.save(update_fields=['KYC_document'])
+
+            logger.info(f"Successfully generated and saved agreement for mechanic {mechanic.id}")
+
+        except Exception as e:
+            # Log an error if PDF generation fails, but don't fail the whole request
+            logger.error(f"Failed to generate agreement PDF for mechanic {mechanic.id}: {e}")
+        # --- END: PDF GENERATION LOGIC ---
+
+
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         message = "Mechanic profile created successfully." if created else "Mechanic profile updated successfully."
     
         return Response({
             "message": message,
         }, status=status_code)
-    
-
-
-
-#  Get KYC Details of Mechanic
-class SetMechanicKYCDetailsView(APIView):
-    authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
-
-        return Response({"message": "KYC details submitted successfully."}, status=status.HTTP_200_OK)

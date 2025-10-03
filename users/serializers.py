@@ -30,7 +30,7 @@ class MechanicSerializer(serializers.ModelSerializer):
         model = Mechanic
         fields = [
             'id', 'user', 'shop_name', 'shop_address', 'shop_latitude',
-            'shop_longitude', 'status', 'is_verified'
+            'shop_longitude', 'status', 'is_verified' ,'KYC_document','adhar_card'
         ]
 
 
@@ -59,7 +59,7 @@ class SetMechanicDetailViewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mechanic
         # Only allow updating of certain fields to maintain data integrity and security.
-        fields = ['shop_name', 'shop_address', 'shop_latitude', 'shop_longitude', 'status']
+        fields = ['shop_name', 'shop_address', 'shop_latitude', 'shop_longitude', 'status', 'KYC_document', 'adhar_card']
         read_only_fields = ['id', 'user']
 
         

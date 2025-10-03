@@ -89,6 +89,14 @@ class Mechanic(models.Model):
         default=StatusChoices.OFFLINE,
         help_text="The mechanic's current availability status."
     )
+    KYC_document = models.CharField(
+        max_length=500, 
+        blank=True, 
+        null=True, 
+        default="",
+        help_text="URL to the generated legal agreement PDF."
+    )
+    adhar_card = models.CharField(max_length=500, blank=True, null=True, default="")
 
     def __str__(self):
         return f"{self.user.email} - {self.shop_name}"

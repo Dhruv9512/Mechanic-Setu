@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mechanic Partner Agreement</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #1a1a1a;
+            text-align: center;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .terms {
+            margin-top: 40px;
+        }
+        .signature {
+            margin-top: 50px;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.8em;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mechanic Partner Agreement</h1>
+        <p>This document confirms the registration and agreement between <strong>Your Company Name</strong> and the mechanic partner detailed below, as of {{ timestamp }}.</p>
+
+        <h2>Partner Details</h2>
+        <table>
+            <tr>
+                <th>Full Name</th>
+                <td>{{ user.first_name }} {{ user.last_name }}</td>
+            </tr>
+            <tr>
+                <th>Contact Email</th>
+                <td>{{ user.email }}</td>
+            </tr>
+            <tr>
+                <th>Contact Number</th>
+                <td>{{ user.mobile_number }}</td>
+            </tr>
+            <tr>
+                <th>Shop Name</th>
+                <td>{{ mechanic.shop_name }}</td>
+            </tr>
+            <tr>
+                <th>Shop Address</th>
+                <td>{{ mechanic.shop_address }}</td>
+            </tr>
+            <tr>
+                <th>Shop Location</th>
+                <td>Lat: {{ mechanic.shop_latitude }}, Lon: {{ mechanic.shop_longitude }}</td>
+            </tr>
+        </table>
+
+        <div class="terms">
+            <h2>Terms and Conditions</h2>
+            <p><strong>Disclaimer: This is a sample template and not legal advice. You should consult with a legal professional to draft your actual terms.</strong></p>
+            <ol>
+                <li>The Mechanic Partner agrees to provide services in a professional and timely manner.</li>
+                <li>The Partner is an independent contractor and not an employee of Your Company Name.</li>
+                <li>All information provided by the Partner, including KYC documents, is certified to be true and accurate.</li>
+                <li>The Partner agrees to adhere to all safety and quality standards set by Your Company Name.</li>
+                <li>Payment terms, commission rates, and service fees are as per the company's policy, communicated separately.</li>
+                <li>This agreement is valid from the date of creation and may be terminated by either party with a notice of 30 days.</li>
+            </ol>
+        </div>
+
+        <div class="signature">
+            <p>This document is electronically generated and serves as a formal record of the agreement.</p>
+            <p><strong>Mechanic ID:</strong> {{ user.id }}</p>
+            <p><strong>Agreement ID:</strong> {{ mechanic.id }}</p>
+        </div>
+        
+        <div class="footer">
+            &copy; 2025 Your Company Name. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

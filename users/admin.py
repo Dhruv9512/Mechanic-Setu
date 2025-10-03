@@ -67,7 +67,7 @@ class MechanicAdmin(admin.ModelAdmin):
     """
     Customizes the admin interface specifically for the Mechanic model.
     """
-    list_display = ('user', 'shop_name', 'status', 'is_verified')
+    list_display = ('user', 'shop_name', 'status', 'is_verified', 'KYC_document', 'adhar_card')
     list_filter = ('status', 'is_verified')
     search_fields = ('user__email', 'shop_name', 'shop_address')
     actions = ['verify_mechanics']

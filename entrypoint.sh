@@ -1,15 +1,6 @@
 #!/bin/bash
 set -e  # Exit immediately if a command exits with a non-zero status
 
-# ✅ Print the environment variable to the log for debugging
-echo "--- CHECKING ENVIRONMENT VARIABLE ---"
-if [ -z "$BREVO_API_KEY" ]; then
-  echo "BREVO_API_KEY is UNSET or EMPTY in the shell."
-else
-  echo "BREVO_API_KEY is SET in the shell."
-fi
-echo "-----------------------------------"
-
 # ✅ Activate Conda environment
 echo "Activating Conda environment..."
 conda run --no-capture-output -n myenv python -c "print('Conda environment activated.')"

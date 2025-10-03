@@ -8,6 +8,13 @@ RUN apt-get update && apt-get install -y \
     libmariadb-dev-compat \
     build-essential \
     tini \
+    # --- ADDED: System libraries for WeasyPrint ---
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libgobject-2.0-0 \
+    libharfbuzz0b \
+    libpango-cairo-1.0-0 \
+    # --- END ADDED LIBRARIES ---
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
@@ -28,10 +35,6 @@ RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
 
 # Activate Conda in the image
 SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
-
-# Remove pip requirements copy and installation
-# COPY requirements.txt /app/
-# RUN pip install --upgrade pip && pip install -r /app/requirements.txt
 
 # Copy the application code
 COPY . /app/
