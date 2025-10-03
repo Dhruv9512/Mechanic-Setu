@@ -313,11 +313,25 @@ class SetMechanicDetailView(APIView):
 
         # 2. Validate the mechanic-specific details (shop_name, etc.)
         Data= request.data
-        profile_pic = request.FILES.get('profile_pic')
+        profile_pic = Data.pop('profile_pic', None)
         if profile_pic:
             blob = put(f"Mechanic Profile/{profile_pic}", profile_pic.read())
             url = blob["url"]
-            Data['profile_pic'] = url
+            profile_pic = url
+        first_name = Data.pop('first_name', None)
+        last_name = Data.pop('last_name', None)
+        mobile_number = Data.pop('mobile_number', None)
+
+        user_serializer = SetUsersDetailsSerializer(user, data={
+            "first_name": first_name or user.first_name,
+            "last_name": last_name or user.last_name,
+            "mobile_number": mobile_number or user.mobile_number,
+            "profile_pic": profile_pic or user.profile_pic,
+        }, partial=True)
+        if not user_serializer.is_valid():
+            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        user_serializer.save()
+
         mechanic_serializer = SetMechanicDetailViewSerializer(data=Data)
         if not mechanic_serializer.is_valid():
             return Response(mechanic_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -334,3 +348,16 @@ class SetMechanicDetailView(APIView):
         return Response({
             "message": message,
         }, status=status_code)
+    
+
+
+
+#  Get KYC Details of Mechanic
+class SetMechanicKYCDetailsView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        return Response({"message": "KYC details submitted successfully."}, status=status.HTTP_200_OK)
