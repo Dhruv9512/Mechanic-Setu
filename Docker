@@ -11,8 +11,10 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     pkg-config \
     libmariadb-dev \
     libmariadb-dev-compat \
+    # --- ADD THIS LINE FOR PYCAIRO ---
+    libcairo2-dev \
+    # --- END ADDITION ---
     tini \
-    # Clean up apt cache to keep the image small
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
