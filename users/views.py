@@ -1,3 +1,4 @@
+from uuid import uuid4
 from django.conf import settings
 from django.core.cache import cache
 from pytz import timezone
@@ -314,7 +315,8 @@ class SetMechanicDetailView(APIView):
         profile_pic = request.FILES.get('profile_pic')
         if profile_pic:
             try:
-                path = f"Mechanic_Profile/{profile_pic.name}"
+                unique_name = f"{uuid4().hex}_{profile_pic.name}"
+                path = f"Mechanic_Profile/{unique_name}"
                 blob = put(path, profile_pic.read())
                 mutable_data['profile_pic'] = blob["url"]
             except Exception as e:
@@ -364,7 +366,7 @@ class SetMechanicDetailView(APIView):
                 # 4. Upload the generated PDF
                 pdf_path = f"Mechanic_Agreements/agreement-{user.id}-{mechanic.id}.pdf"
                 # Use result.getvalue() to get the byte content of the PDF
-                pdf_blob = put(pdf_path, result.getvalue())
+                pdf_blob = put(pdf_path, result.getvalue(), )
                 pdf_url = pdf_blob.get("url")
 
                 # 5. Save the PDF URL to the mechanic's profile
