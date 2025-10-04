@@ -3,7 +3,8 @@ from django.conf import settings
 from django.core.cache import cache
 from vercel_blob import put
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated , IsAdminUser
+from rest_framework.permissions import IsAuthenticated
+from users.authentication import CookieJWTAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,7 +18,8 @@ class UpdateMechanicStatusView(APIView):
     View to update the status of a mechanic.
     Only accessible by admin users.
     """
-    permission_classes = [IsAdminUser]
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         mechanic_id = request.data.get('mechanic_id')
