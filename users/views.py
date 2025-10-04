@@ -322,10 +322,11 @@ class SetMechanicDetailView(APIView):
             except Exception as e:
                 logger.error(f"File upload failed: {e}")
                 return Response({"error": "File upload failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        first_name = mutable_data.pop('first_name', None)
-        last_name = mutable_data.pop('last_name', None)
-        mobile_number = mutable_data.pop('mobile_number', None)
-    
+        first_name = mutable_data.pop('first_name', None)[0]
+        last_name = mutable_data.pop('last_name', None)[0]
+        mobile_number = mutable_data.pop('mobile_number', None)[0]
+        profile_pic = mutable_data.get('profile_pic', None)
+
         user_serializer = SetUsersDetailsSerializer(user, data={
             "first_name": first_name or user.first_name,
             "last_name": last_name or user.last_name,
