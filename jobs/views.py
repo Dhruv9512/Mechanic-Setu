@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from users.models import Mechanic
 
 
-# 
+# View to update the status of a mechanic.
 class UpdateMechanicStatusView(APIView):
     """
     View to update the status of a mechanic.
@@ -21,17 +21,46 @@ class UpdateMechanicStatusView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        mechanic_id = request.data.get('mechanic_id')
+    def put(self, request):
+        
+        user_id = request.user.id
         new_status = request.data.get('status')
 
-        if not mechanic_id or not new_status:
-            return Response({"error": "mechanic_id and status are required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not user_id or not new_status:
+            return Response({"error": "user_id and status are required."}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            mechanic = Mechanic.objects.get(id=mechanic_id)
+            mechanic = Mechanic.objects.get(user_id=user_id)
             mechanic.status = new_status
             mechanic.save()
             return Response({"message": "Mechanic status updated successfully."}, status=status.HTTP_200_OK)
+        except Mechanic.DoesNotExist:
+            return Response({"error": "Mechanic not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+# View to get the basic needs of a mechanic.
+class GetBasicNeedsView(APIView):
+    """
+    View to get the basic needs of a mechanic.
+    Only accessible by authenticated users.
+    """
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user_id = request.user.id
+
+        if not user_id:
+            return Response({"error": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            mechanic = Mechanic.objects.get(user_id=user_id)
+            basic_needs = {
+                "status": mechanic.status,
+                "is_verified": mechanic.is_verified,
+            }
+            return Response({"basic_needs": basic_needs}, status=status.HTTP_200_OK)
         except Mechanic.DoesNotExist:
             return Response({"error": "Mechanic not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
