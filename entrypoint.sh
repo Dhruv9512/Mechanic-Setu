@@ -2,12 +2,10 @@
 set -e  # Exit immediately if a command exits with a non-zero status
 
 # ✅ Wait for the database to become available
-echo "Waiting for database to be ready..."
-while ! conda run --no-capture-output -n myenv python manage.py showmigrations &>/dev/null; do
-    echo "Database not ready, waiting..."
+echo "Waiting for database..."
+while ! python manage.py showmigrations &>/dev/null; do
     sleep 2
 done
-echo "Database is ready."
 
 # ✅ Apply database migrations
 echo "Applying database migrations..."

@@ -1,41 +1,35 @@
-# Use a slim, official Python image for a smaller and faster build
+# Use official Python slim image
 FROM python:3.10-slim-bookworm
 
-# Set environment variables for Python
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Install system dependencies AND APPLY SECURITY UPGRADES
+# Install system dependencies
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     libmariadb-dev \
     libmariadb-dev-compat \
-    # --- ADD THIS LINE FOR PYCAIRO ---
     libcairo2-dev \
-    # --- END ADDITION ---
     tini \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
+# Set workdir
 WORKDIR /app
 
-# Copy and install Python requirements
+# Install Python requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of your application code
+# Copy project files
 COPY . .
 
-# Ensure your startup script is executable
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Copy entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Expose the port your application runs on
+# Expose Daphne port
 EXPOSE 8000
 
-# Use tini for proper process management
-ENTRYPOINT ["/usr/bin/tini", "--"]
-
-# Run your application via the entrypoint script
-CMD ["/app/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
