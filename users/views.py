@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.cache import cache
 from pytz import timezone
-from requests import put
+from vercel_blob import put
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
