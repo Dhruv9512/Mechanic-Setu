@@ -39,6 +39,7 @@ ALLOWED_HOSTS = ["mechanic-setu.onrender.com","mechanicsetu.netlify.app","localh
 INSTALLED_APPS = [
     'jet',
     "users",
+    "jobs",
     "core",
     'channels',
     'corsheaders',
