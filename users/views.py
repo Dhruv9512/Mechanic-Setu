@@ -367,12 +367,12 @@ class SetMechanicDetailView(APIView):
                 # 4. Upload the generated PDF
                 pdf_path = f"Mechanic_Agreements/agreement-{user.id}-{mechanic.id}.pdf"
                 # Use result.getvalue() to get the byte content of the PDF
-                pdf_blob = put(pdf_path, result.getvalue(), )
-                pdf_url = pdf_blob.get("url")
+                pdf_blob = put(pdf_path, result.getvalue())
+                pdf_url = pdf_blob["url"]
 
                 # 5. Save the PDF URL to the mechanic's profile
-                mechanic.agreement_document = pdf_url
-                mechanic.save(update_fields=['agreement_document'])
+                mechanic.KYC_document = pdf_url
+                mechanic.save(update_fields=['KYC_document'])
                 logger.info(f"Successfully generated agreement for mechanic {mechanic.id} with xhtml2pdf")
             else:
                 logger.error(f"xhtml2pdf error for mechanic {mechanic.id}: {pdf.err}")
