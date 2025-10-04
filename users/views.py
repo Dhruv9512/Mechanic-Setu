@@ -308,14 +308,6 @@ class SetMechanicDetailView(APIView):
         It also uses `update_or_create` for robustly handling both new and existing mechanic profiles.
         """
         user = request.user
-
-        # 1. Update the user-related details (first_name, etc.)
-        user_serializer = SetUsersDetailsSerializer(user, data=request.data, partial=True)
-        if not user_serializer.is_valid():
-            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        user_serializer.save()
-
-        # 2. Validate the mechanic-specific details (shop_name, etc.)
         mutable_data = request.data.copy()
 
         # 1. Handle profile picture upload
