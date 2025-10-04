@@ -1,106 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Mechanic Partner Agreement</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            line-height: 1.6;
-            color: #333;
-        }
-        .container {
-            width: 80%;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #1a1a1a;
-            text-align: center;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 10px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .terms {
-            margin-top: 40px;
-        }
-        .signature {
-            margin-top: 50px;
-        }
-        .footer {
-            margin-top: 50px;
-            text-align: center;
-            font-size: 0.8em;
-            color: #777;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Mechanic Partner Agreement</title>
+  <style>
+    body {
+      font-family: "Times New Roman", serif;
+      line-height: 1.6;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+    .page {
+      width: 90%;
+      margin: 30px auto;
+      padding: 30px;
+      border: 1px solid #000;
+      background: #fff;
+    }
+    .header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .header img {
+      width: 120px;
+      height: auto;
+    }
+    h1, h2 {
+      text-align: center;
+      text-transform: uppercase;
+      margin: 10px 0;
+    }
+    h1 {
+      font-size: 22px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 5px;
+    }
+    h2 {
+      font-size: 18px;
+      margin-top: 30px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 8px 10px;
+      text-align: left;
+    }
+    th {
+      width: 30%;
+      background: #f9f9f9;
+    }
+    .section-title {
+      margin-top: 40px;
+      font-weight: bold;
+      font-size: 16px;
+      text-decoration: underline;
+    }
+    .profile-section {
+      margin-top: 50px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-top: 2px solid #000;
+      padding-top: 15px;
+    }
+    .profile-section img {
+      width: 90px;
+      height: 90px;
+      border: 1px solid #000;
+      object-fit: cover;
+    }
+    .profile-details {
+      font-size: 14px;
+    }
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 12px;
+      color: #555;
+    }
+    .page-break {
+      page-break-before: always;
+    }
+    ol {
+      margin: 20px 0;
+      padding-left: 20px;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Mechanic Partner Agreement</h1>
-        <p>This document confirms the registration and agreement between <strong>Your Company Name</strong> and the mechanic partner detailed below, as of {{ timestamp }}.</p>
-
-        <h2>Partner Details</h2>
-        <table>
-            <tr>
-                <th>Full Name</th>
-                <td>{{ user.first_name }} {{ user.last_name }}</td>
-            </tr>
-            <tr>
-                <th>Contact Email</th>
-                <td>{{ user.email }}</td>
-            </tr>
-            <tr>
-                <th>Contact Number</th>
-                <td>{{ user.mobile_number }}</td>
-            </tr>
-            <tr>
-                <th>Shop Name</th>
-                <td>{{ mechanic.shop_name }}</td>
-            </tr>
-            <tr>
-                <th>Shop Address</th>
-                <td>{{ mechanic.shop_address }}</td>
-            </tr>
-            <tr>
-                <th>Shop Location</th>
-                <td>Lat: {{ mechanic.shop_latitude }}, Lon: {{ mechanic.shop_longitude }}</td>
-            </tr>
-        </table>
-
-        <div class="terms">
-            <h2>Terms and Conditions</h2>
-            <p><strong>Disclaimer: This is a sample template and not legal advice. You should consult with a legal professional to draft your actual terms.</strong></p>
-            <ol>
-                <li>The Mechanic Partner agrees to provide services in a professional and timely manner.</li>
-                <li>The Partner is an independent contractor and not an employee of Your Company Name.</li>
-                <li>All information provided by the Partner, including KYC documents, is certified to be true and accurate.</li>
-                <li>The Partner agrees to adhere to all safety and quality standards set by Your Company Name.</li>
-                <li>Payment terms, commission rates, and service fees are as per the company's policy, communicated separately.</li>
-                <li>This agreement is valid from the date of creation and may be terminated by either party with a notice of 30 days.</li>
-            </ol>
-        </div>
-
-        <div class="signature">
-            <p>This document is electronically generated and serves as a formal record of the agreement.</p>
-            <p><strong>Mechanic ID:</strong> {{ user.id }}</p>
-            <p><strong>Agreement ID:</strong> {{ mechanic.id }}</p>
-        </div>
-        
-        <div class="footer">
-            &copy; 2025 Your Company Name. All rights reserved.
-        </div>
+  <!-- PAGE 1 -->
+  <div class="page">
+    <div class="header">
+      <img src="https://setu-partner.netlify.app/ms.png" alt="Company Logo">
     </div>
+
+    <h1>Mechanic Setu Partner Agreement Form</h1>
+    <p>
+      This agreement is made between <strong>Mechanic Setu</strong> and the mechanic
+      partner mentioned below, effective as of <strong>{{ timestamp }}</strong>.
+    </p>
+
+    <h2>Partner Information</h2>
+    <table>
+      <tr>
+        <th>Mechanic ID</th>
+        <td>{{ mechanic.id }}</td>
+      </tr>
+      <tr>
+        <th>Full Name</th>
+        <td>{{ mechanic.user.first_name }} {{ mechanic.user.last_name }}</td>
+      </tr>
+      <tr>
+        <th>Email</th>
+        <td>{{ mechanic.user.email }}</td>
+      </tr>
+      <tr>
+        <th>Mobile Number</th>
+        <td>{{ mechanic.user.mobile_number }}</td>
+      </tr>
+      <tr>
+        <th>Shop Name</th>
+        <td>{{ mechanic.shop_name }}</td>
+      </tr>
+      <tr>
+        <th>Shop Address</th>
+        <td>{{ mechanic.shop_address }}</td>
+      </tr>
+      <tr>
+        <th>Shop Location</th>
+        <td>Lat: {{ mechanic.shop_latitude }}, Lon: {{ mechanic.shop_longitude }}</td>
+      </tr>
+      <tr>
+        <th>KYC Document</th>
+        <td>{{ mechanic.KYC_document }}</td>
+      </tr>
+    </table>
+
+    <div class="section-title">Acknowledgement</div>
+    <p>
+      By agreeing to this document, the Mechanic Partner confirms that all details provided
+      above are accurate and true to the best of their knowledge, and they agree to
+      abide by the terms outlined in this agreement.
+    </p>
+
+    <!-- Profile Section -->
+    <div class="profile-section">
+      <img src="{{ mechanic.user.profile_pic }}" alt="Profile Picture">
+      <div class="profile-details">
+        <strong>{{ mechanic.user.first_name }} {{ mechanic.user.last_name }}</strong><br/>
+        Mechanic ID: {{ mechanic.id }}<br/>
+        Mobile: {{ mechanic.user.mobile_number }}
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; 2025 Mechanic Setu. All rights reserved.
+    </div>
+  </div>
+
+  <!-- PAGE 2 -->
+  <div class="page page-break">
+    <div class="header">
+      <img src="https://setu-partner.netlify.app/ms.png" alt="Company Logo">
+    </div>
+
+    <h2>Terms and Conditions</h2>
+    <ol>
+      <li>The Mechanic Partner shall provide services in a professional, timely, and safe manner.</li>
+      <li>The Partner is recognized as an independent contractor, not an employee of Mechanic Setu.</li>
+      <li>All documents, including KYC, are confirmed to be true and valid by the Mechanic Partner.</li>
+      <li>The Partner shall comply with all local laws, safety regulations, and quality standards.</li>
+      <li>Payment, commission, and fees will follow the company’s current policy and may be revised periodically.</li>
+      <li>This agreement may be terminated by either party with 30 days’ written notice.</li>
+      <li>The Partner must maintain valid licenses and certifications required to operate legally.</li>
+      <li>The Company reserves the right to suspend or terminate this agreement for misconduct, fraud, or breach of policy.</li>
+      <li>Disputes arising from this agreement shall be resolved under the jurisdiction of [Your City, State Courts].</li>
+      <li>This agreement is electronically generated and does not require physical signatures to be valid.</li>
+    </ol>
+
+    <!-- Profile Section -->
+    <div class="profile-section">
+      <img src="{{ mechanic.user.profile_pic }}" alt="Profile Picture">
+      <div class="profile-details">
+        <strong>{{ mechanic.user.first_name }} {{ mechanic.user.last_name }}</strong><br/>
+        Mechanic ID: {{ mechanic.id }}<br/>
+        Mobile: {{ mechanic.user.mobile_number }}
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; 2025 Mechanic Setu.
+    </div>
+  </div>
 </body>
 </html>
