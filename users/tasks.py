@@ -4,9 +4,16 @@ from django.template.loader import render_to_string
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 import logging
+import pytz
+from datetime import datetime
 
 # Set up a logger for this module
 logger = logging.getLogger(__name__)
+
+# Function to return the current time as a string in HH:MM:SS format
+def get_current_datetime():
+    ist = pytz.timezone('Asia/Kolkata')
+    return datetime.now(ist).strftime("%Y-%m-%d %I:%M %p")
 
 # --- Brevo API Client Configuration ---
 # This setup is done once when the Celery worker starts.

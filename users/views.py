@@ -1,10 +1,9 @@
 from uuid import uuid4
 from django.conf import settings
 from django.core.cache import cache
-from pytz import timezone
 from vercel_blob import put
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated , IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -14,7 +13,7 @@ from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 
 from .authentication import generate_otp, user_key, CookieJWTAuthentication
-from .tasks import Otp_Verification, send_login_success_email,Send_Mechanic_Login_Successful_Email,Send_Mechanic_Otp_Verification
+from .tasks import Otp_Verification, send_login_success_email,Send_Mechanic_Login_Successful_Email,Send_Mechanic_Otp_Verification,get_current_datetime
 from .models import CustomUser, Mechanic
 
 import logging
@@ -22,6 +21,7 @@ import os
 from django.template.loader import render_to_string
 from io import BytesIO 
 from xhtml2pdf import pisa 
+
 
 # --- IMPORT THE NEW SERIALIZERS ---
 from .serializers import (
@@ -354,7 +354,7 @@ class SetMechanicDetailView(APIView):
             context = {
                 'user': user,
                 'mechanic': mechanic,
-                'timestamp': timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+                'timestamp': get_current_datetime()
             }
             # 2. Render the HTML template to a string (same as before)
             html_string = render_to_string('mechanic_agreement.html', context)
@@ -387,3 +387,64 @@ class SetMechanicDetailView(APIView):
         return Response({
             "message": message,
         }, status=status_code)
+    
+# ---------------------------Admin Views---------------------------
+
+# View to get all unverified mechanics
+class GetMechanicDetailForVerifyView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        # 1. Fetch all mechanics where 'is_verified' is False.
+        #    This will return a list (queryset) of mechanics.
+        unverified_mechanics = Mechanic.objects.filter(is_verified=False)
+
+        # 2. Serialize the list of mechanics.
+        #    'many=True' tells the serializer to expect and handle a list of objects.
+        serializer = MechanicSerializer(unverified_mechanics, many=True)
+
+        # 3. Return the serialized data.
+        #    If no unverified mechanics are found, this will correctly return an empty list: [].
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class VerifyMechanicView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request):
+        try:
+            mechanic_id = request.data.get("mechanic_id")
+            if not mechanic_id:
+                return Response({"error": "Mechanic ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+             # 1. Fetch the mechanic by ID.
+            mechanic = Mechanic.objects.get(id=mechanic_id)
+            mechanic.is_verified = True
+            mechanic.save(update_fields=['is_verified'])
+            return Response({"message": "Mechanic verified successfully."}, status=status.HTTP_200_OK)
+        except Mechanic.DoesNotExist:
+            return Response({"error": "Mechanic not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error verifying mechanic {mechanic_id}: {e}")
+            return Response({"error": "Something went wrong."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+# Mechenic is not verified for this job
+class RejectMechanicView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request):
+        try:
+            mechanic_id = request.data.get("mechanic_id")
+            if not mechanic_id:
+                return Response({"error": "Mechanic ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+    
+            Mechanic.objects.get(id=mechanic_id).delete() 
+            return Response({"message": "Mechanic rejected successfully."}, status=status.HTTP_200_OK)
+        except Mechanic.DoesNotExist:
+            return Response({"error": "Mechanic not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error rejecting mechanic {mechanic_id}: {e}")
+            return Response({"error": "Something went wrong."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
