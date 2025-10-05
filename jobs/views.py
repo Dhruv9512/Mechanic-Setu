@@ -47,7 +47,7 @@ class UpdateMechanicStatusView(APIView):
 
 
 # View to get the basic needs of a mechanic.
-@method_decorator(cache_per_user(60 * 5), name='dispatch')
+@method_decorator(cache_per_user(60 * 5), name='get')
 class GetBasicNeedsView(APIView):
     """
     View to get the basic needs of a mechanic.
