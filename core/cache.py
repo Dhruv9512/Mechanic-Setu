@@ -1,6 +1,8 @@
 import functools
 from hashlib import md5
 from django.core.cache import cache
+# Make sure to import Response from DRF
+from rest_framework.response import Response
 
 USER_CACHE_PREFIX = "user_cache"
 
@@ -44,15 +46,24 @@ def cache_per_user(timeout):
                 keys.add(cache_key)
                 cache.set(registry_key, keys, 6 * 60)  # 6 min registry
 
-            # Try to get cached response
-            cached_response = cache.get(cache_key)
-            if cached_response is not None:
-                return cached_response
+            # Try to get cached response data
+            cached_payload = cache.get(cache_key)
+            if cached_payload is not None:
+                # Recreate the response from the cached data and status
+                return Response(data=cached_payload['data'], status=cached_payload['status'])
 
-            # Call the view
+            # Call the view to get a fresh response
             response = view_func(request, *args, **kwargs)
+            
+            # Only cache successful responses (status code 2xx)
+            if 200 <= response.status_code < 300:
+                # Create a simple dictionary to cache, not the whole response object
+                payload_to_cache = {
+                    'data': response.data,
+                    'status': response.status_code,
+                }
+                cache.set(cache_key, payload_to_cache, timeout)
 
-            cache.set(cache_key, response, timeout)
             return response
 
         return _wrapped_view
@@ -69,4 +80,3 @@ def delete_all_user_cache(user):
     for key in keys:
         cache.delete(key)
     cache.delete(registry_key)  # clean up the registry itself
-
