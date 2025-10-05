@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
-from users.authentication import CookieJWTAuthentication
+from core.authentication import CookieJWTAuthentication
 from django.conf import settings
 from django.core.management import call_command
 from django.db import connections, transaction

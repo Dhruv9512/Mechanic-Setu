@@ -12,7 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 
-from .authentication import generate_otp, user_key, CookieJWTAuthentication
+from  core.authentication import generate_otp,CookieJWTAuthentication
 from .tasks import Otp_Verification, send_login_success_email,Send_Mechanic_Login_Successful_Email,Send_Mechanic_Otp_Verification,get_current_datetime
 from .models import CustomUser, Mechanic
 
@@ -22,7 +22,7 @@ from django.template.loader import render_to_string
 from io import BytesIO 
 from xhtml2pdf import pisa 
 
-
+from core.cache import cache_per_user, generate_user_cache_key,delete_all_user_cache
 # --- IMPORT THE NEW SERIALIZERS ---
 from .serializers import (
     UserSerializer, 
@@ -142,7 +142,7 @@ class Login_SignUpView(APIView):
             status_message = "New User" if created else "Existing User"
 
             otp = generate_otp()
-            key = user_key(user=user)
+            key = f"otp_{user.id}"
             cache.set(key, otp, timeout=OTP_TTL_SECONDS)
 
             try:
@@ -174,10 +174,7 @@ class LogoutView(APIView):
         
         response = Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
         clear_auth_cookies(response)
-        try:
-            cache.delete(user_key(user=request.user))
-        except Exception:
-            pass # Fails silently if user key doesn't exist
+        delete_all_user_cache(request.user)
         return response
 
 
@@ -279,7 +276,7 @@ class ResendOtpView(APIView):
                 return Response({"error": "User not found or is already active."}, status=status.HTTP_404_NOT_FOUND)
 
             otp = generate_otp()
-            new_key = user_key(user=user)
+            new_key = f"otp_{user.id}"
             cache.set(new_key, otp, timeout=OTP_TTL_SECONDS)
 
             try:
@@ -422,6 +419,7 @@ class VerifyMechanicView(APIView):
             mechanic = Mechanic.objects.get(id=mechanic_id)
             mechanic.is_verified = True
             mechanic.save(update_fields=['is_verified'])
+            cache.delete(generate_user_cache_key(request))
             return Response({"message": "Mechanic verified successfully."}, status=status.HTTP_200_OK)
         except Mechanic.DoesNotExist:
             return Response({"error": "Mechanic not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -442,6 +440,7 @@ class RejectMechanicView(APIView):
                 return Response({"error": "Mechanic ID is required."}, status=status.HTTP_400_BAD_REQUEST)
     
             Mechanic.objects.get(id=mechanic_id).delete() 
+            cache.delete(generate_user_cache_key(request))
             return Response({"message": "Mechanic rejected successfully."}, status=status.HTTP_200_OK)
         except Mechanic.DoesNotExist:
             return Response({"error": "Mechanic not found."}, status=status.HTTP_404_NOT_FOUND)

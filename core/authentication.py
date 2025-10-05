@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 ACCESS_COOKIE = "access"
-USER_CACHE_PREFIX = "user_cache"
+
 
 class CookieJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
@@ -34,20 +34,3 @@ def generate_otp():
     """
     return f"{random.randint(100000, 999999)}"
 
-
-def user_cache_key(request, key_prefix, cache_key):
-    """
-    Stable cache key per user (or 'anon') using md5 hex.
-    Key components are intentionally simple to keep behavior identical.
-    """
-    user_id = request.user.pk if getattr(request.user, "is_authenticated", False) else "anon"
-    base = f"{USER_CACHE_PREFIX}:{user_id}"
-    return md5(base.encode("utf-8")).hexdigest()
-
-
-def user_key(user):
-    """
-    Cache key based on user primary key using md5 hex.
-    """
-    base = f"{USER_CACHE_PREFIX}:{user.pk}"
-    return md5(base.encode("utf-8")).hexdigest()
