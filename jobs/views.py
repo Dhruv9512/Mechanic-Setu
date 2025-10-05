@@ -37,7 +37,6 @@ class UpdateMechanicStatusView(APIView):
             mechanic = Mechanic.objects.get(user_id=user_id)
             mechanic.status = new_status
             mechanic.save()
-            cache.delete(generate_user_cache_key(request))
             return Response({"message": "Mechanic status updated successfully."}, status=status.HTTP_200_OK)
         except Mechanic.DoesNotExist:
             return Response({"error": "Mechanic not found."}, status=status.HTTP_404_NOT_FOUND)
