@@ -51,10 +51,6 @@ def cache_per_user(timeout):
 
             # Call the view
             response = view_func(request, *args, **kwargs)
-            
-            # Render DRF Response before caching
-            if hasattr(response, "render"):
-                response.render()
 
             cache.set(cache_key, response, timeout)
             return response
