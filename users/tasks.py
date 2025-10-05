@@ -154,3 +154,68 @@ def Send_Mechanic_Login_Successful_Email(user_data):
     except Exception as e:
         logger.error(f"Error in Send_Mechanic_Login_Successful_Email task for {user_data.get('email')}: {e}", exc_info=True)
 
+
+
+
+
+@shared_task(name="send_kyc_submission_email")
+def send_kyc_submission_email(user_data):
+    """Celery task to confirm KYC submission to a mechanic."""
+    try:
+        email = user_data.get("email")
+        context = {
+            "first_name": user_data.get("first_name", ""),
+            "last_name": user_data.get("last_name", "")
+        }
+        _send_templated_email(
+            subject="KYC Documents Received - Setu Partner",
+            to_email=email,
+            html_template="Mechanic_KYC_Received.html",
+            context=context,
+            plain_fallback=f"Hi {context['first_name']}, we have received your KYC documents and they are now under review.",
+            sender_name="Setu Partner"
+        )
+    except Exception as e:
+        logger.error(f"Error in send_kyc_submission_email task for {user_data.get('email')}: {e}", exc_info=True)
+
+
+@shared_task(name="send_kyc_approved_email")
+def send_kyc_approved_email(user_data):
+    """Celery task to notify a mechanic of KYC approval."""
+    try:
+        email = user_data.get("email")
+        context = {
+            "first_name": user_data.get("first_name", ""),
+            "last_name": user_data.get("last_name", "")
+        }
+        _send_templated_email(
+            subject="Congratulations! Your KYC is Approved - Setu Partner",
+            to_email=email,
+            html_template="Mechanic_KYC_Approved.html",
+            context=context,
+            plain_fallback=f"Hi {context['first_name']}, your KYC has been approved! You can now start accepting jobs.",
+            sender_name="Setu Partner"
+        )
+    except Exception as e:
+        logger.error(f"Error in send_kyc_approved_email task for {user_data.get('email')}: {e}", exc_info=True)
+
+
+@shared_task(name="send_kyc_rejected_email")
+def send_kyc_rejected_email(user_data):
+    """Celery task to notify a mechanic of KYC rejection."""
+    try:
+        email = user_data.get("email")
+        context = {
+            "first_name": user_data.get("first_name", ""),
+            "last_name": user_data.get("last_name", "")
+        }
+        _send_templated_email(
+            subject="Action Required: Update Your KYC Information - Setu Partner",
+            to_email=email,
+            html_template="Mechanic_KYC_Rejected.html",
+            context=context,
+            plain_fallback=f"Hi {context['first_name']}, we were unable to approve your KYC submission. Please log in to your dashboard to resubmit.",
+            sender_name="Setu Partner"
+        )
+    except Exception as e:
+        logger.error(f"Error in send_kyc_rejected_email task for {user_data.get('email')}: {e}", exc_info=True)

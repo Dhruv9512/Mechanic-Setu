@@ -13,7 +13,7 @@ from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 
 from  core.authentication import generate_otp,CookieJWTAuthentication
-from .tasks import Otp_Verification, send_login_success_email,Send_Mechanic_Login_Successful_Email,Send_Mechanic_Otp_Verification,get_current_datetime
+
 from .models import CustomUser, Mechanic
 
 import logging
@@ -31,6 +31,16 @@ from .serializers import (
     SetMechanicDetailViewSerializer
 )
 
+from .tasks import (
+    Otp_Verification, 
+    send_login_success_email,
+    Send_Mechanic_Login_Successful_Email,
+    Send_Mechanic_Otp_Verification,
+    get_current_datetime,
+    send_kyc_submission_email,
+    send_kyc_approved_email, 
+    send_kyc_rejected_email 
+)
 logger = logging.getLogger(__name__)
 
 # -------------------------
@@ -376,8 +386,16 @@ class SetMechanicDetailView(APIView):
 
         except Exception as e:
             logger.error(f"Failed to generate agreement PDF for mechanic {mechanic.id}: {e}")
-        # --- END: UPDATED PDF GENERATION LOGIC ---
 
+        try:
+            send_kyc_submission_email.delay({
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name
+            })
+        except Exception as e:
+            logger.warning(f"Failed to enqueue KYC submission email for {user.email}: {e}")
+        # --- END: UPDATED PDF GENERATION LOGIC ---
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         message = "Mechanic profile created successfully." if created else "Mechanic profile updated successfully."
     
@@ -420,6 +438,15 @@ class VerifyMechanicView(APIView):
             mechanic.is_verified = True
             mechanic.save(update_fields=['is_verified'])
             cache.delete(generate_user_cache_key(request))
+            try:
+                send_kyc_approved_email.delay({
+                    "email": mechanic.user.email,
+                    "first_name": mechanic.user.first_name,
+                    "last_name": mechanic.user.last_name
+                })
+            except Exception as e:
+                logger.warning(f"Failed to enqueue KYC approval email for {mechanic.user.email}: {e}")
+
             return Response({"message": "Mechanic verified successfully."}, status=status.HTTP_200_OK)
         except Mechanic.DoesNotExist:
             return Response({"error": "Mechanic not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -438,8 +465,21 @@ class RejectMechanicView(APIView):
             mechanic_id = request.data.get("mechanic_id")
             if not mechanic_id:
                 return Response({"error": "Mechanic ID is required."}, status=status.HTTP_400_BAD_REQUEST)
-    
-            Mechanic.objects.get(id=mechanic_id).delete() 
+            
+            mechanic = Mechanic.objects.get(id=mechanic_id)
+
+            # --- ADD THIS PART ---
+            try:
+                send_kyc_rejected_email.delay({
+                    "email": mechanic.user.email,
+                    "first_name": mechanic.user.first_name,
+                    "last_name": mechanic.user.last_name
+                })
+            except Exception as e:
+                logger.warning(f"Failed to enqueue KYC rejection email for {mechanic.user.email}: {e}")
+            # --- END OF ADDED PART ---
+
+            mechanic.delete() 
             cache.delete(generate_user_cache_key(request))
             return Response({"message": "Mechanic rejected successfully."}, status=status.HTTP_200_OK)
         except Mechanic.DoesNotExist:

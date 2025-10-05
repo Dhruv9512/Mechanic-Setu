@@ -273,6 +273,6 @@ CACHES = {
 
 AUTH_USER_MODEL = "users.CustomUser"
 AUTHENTICATION_BACKENDS = [
-    "users.backends.EmailBackend",   # custom: email-only for OTP
+    "core.backends.EmailBackend",   # custom: email-only for OTP
     "django.contrib.auth.backends.ModelBackend",  # default: email+password for admin/superuser
 ]
