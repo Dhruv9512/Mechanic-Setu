@@ -42,19 +42,26 @@ def cache_per_user(timeout):
                 registry_key = f"user_cache_keys:{request.user.pk}"
                 keys = cache.get(registry_key) or set()
                 keys.add(cache_key)
-                cache.set(registry_key, keys, 6*60)  # Keep registry for 6 minutes
+                cache.set(registry_key, keys, 6 * 60)  # 6 min registry
 
-            # Normal caching logic
-            response = cache.get(cache_key)
-            if response is not None:
-                return response
+            # Try to get cached response
+            cached_response = cache.get(cache_key)
+            if cached_response is not None:
+                return cached_response
 
+            # Call the view
             response = view_func(request, *args, **kwargs)
+            
+            # Render DRF Response before caching
+            if hasattr(response, "render"):
+                response.render()
+
             cache.set(cache_key, response, timeout)
             return response
 
         return _wrapped_view
     return decorator
+
 
 
 def delete_all_user_cache(user):
