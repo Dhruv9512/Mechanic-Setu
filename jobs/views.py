@@ -13,6 +13,10 @@ from users.models import Mechanic
 from core.cache import cache_per_user, generate_user_cache_key
 from django.utils.decorators import method_decorator
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 # View to update the status of a mechanic.
 class UpdateMechanicStatusView(APIView):
     """
@@ -53,12 +57,17 @@ class GetBasicNeedsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user_id = request.user.id
+        user_id = getattr(request.user, 'id', None)
+        logger.info(f"GetBasicNeedsView called by user_id: {user_id}")
 
         if not user_id:
+            logger.warning("No user_id found in request.user")
             return Response({"error": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
             mechanic = Mechanic.objects.get(user_id=user_id)
+            logger.info(f"Mechanic found for user_id {user_id}: {mechanic}")
+            
             basic_needs = {
                 "first_name": mechanic.user.first_name,
                 "last_name": mechanic.user.last_name,
@@ -67,7 +76,11 @@ class GetBasicNeedsView(APIView):
                 "is_verified": mechanic.is_verified,
             }
             return Response({"basic_needs": basic_needs}, status=status.HTTP_200_OK)
+        
         except Mechanic.DoesNotExist:
+            logger.error(f"Mechanic not found for user_id: {user_id}")
             return Response({"error": "Mechanic not found."}, status=status.HTTP_404_NOT_FOUND)
+        
         except Exception as e:
+            logger.exception(f"Unexpected error for user_id {user_id}: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
