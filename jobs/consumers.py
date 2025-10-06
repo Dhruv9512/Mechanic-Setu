@@ -52,7 +52,8 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         try:
             validated_token = AccessToken(token_key)
             user_id = validated_token["user_id"]
-            return CustomUser.objects.only('id', 'username').get(id=user_id)
+            # FIX: Replace 'username' with 'email'
+            return CustomUser.objects.only('id', 'email').get(id=user_id)
         except Exception as e:
             logger.error(f"[TOKEN ERROR] Invalid token: {e}", exc_info=True)
             return None

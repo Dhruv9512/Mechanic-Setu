@@ -104,18 +104,16 @@ class CookieTokenRefreshView(APIView):
         return response
 
 
+
 class MeApiView(APIView):
-    """
-    Returns authenticated user's info.
-    Requires a valid access token in HttpOnly cookie.
-    """
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        logger.info("User data requested: %s", getattr(user, "username", None))
-        return Response({"username": user.id}, status=HTTP_200)
+        logger.info("User data requested: %s", getattr(user, "email", None))
+        # FIX: Return fields that exist, like id and email
+        return Response({"id": user.id, "email": user.email}, status=HTTP_200)
 
 
 class ExpiredCleanupView(APIView):
