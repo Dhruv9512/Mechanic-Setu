@@ -13,7 +13,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db import connections, transaction
 import logging
-
+from datetime import timedelta
 logger = logging.getLogger(__name__)
 
 # -------------------------
@@ -149,3 +149,36 @@ class ExpiredCleanupView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"detail": details}, status=status.HTTP_200_OK)
+    
+
+class GetWsTokenView(APIView):
+    """
+    Returns a short-lived WebSocket token for the authenticated user.
+    Requires a valid access token in HttpOnly cookie.
+    """
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user = request.user
+            if not user:
+                logger.warning("Unauthorized attempt to get WebSocket token")
+                return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Create refresh token for user with 2-min lifetime (unchanged semantics)
+            refresh = RefreshToken.for_user(user)
+            refresh.set_exp(lifetime=timedelta(minutes=2))
+
+            # Create access token with 2-min lifetime
+            access = refresh.access_token
+            access.set_exp(lifetime=timedelta(minutes=2))
+
+            ws_token = str(access)
+
+            logger.info(f"WebSocket token issued for user: {user.email}")
+            return Response({"ws_token": ws_token}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Error generating WebSocket token: {e}", exc_info=True)
+            return Response({"error": "Failed to generate WebSocket token"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
