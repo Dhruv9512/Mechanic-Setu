@@ -15,30 +15,47 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
     Handles WebSocket connections for users and mechanics, facilitating real-time
     job notifications, job acceptances, and location tracking.
     """
+
+    # --- Connection Management ---
+
     async def connect(self):
-        # Extract user_id from the URL
+        """
+        This method is called when a client (a user's browser or app)
+        tries to establish a WebSocket connection.
+        """
+        # 1. Authenticate the user from the token in the URL.
+        #    The frontend will send its JWT token in the WebSocket URL's query string.
+        #    Example URL: ws://.../?token=...
         query_string = self.scope.get("query_string", b"").decode()
         query_params = parse_qs(query_string)
         token_key = query_params.get("token", [None])[0]
 
         self.user = await self.get_user_from_token(token_key)
         if not self.user:
+            # If the token is invalid, the connection is rejected.
             await self.close()
             return
+
         self.user_id = self.user.id
-        self.room_group_name = f'Mechanic_{self.user_id}'
-        # Add the user's channel to a group specific to their user_id
+        # 2. Define a unique "room" or "group" name for this user. This acts
+        #    as their private channel for receiving direct notifications.
+        self.room_group_name = f'user_{self.user_id}'
+        
+        # 3. Add this user's connection to their private group.
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
 
-        # Accept the WebSocket connection
+        # 4. Accept the connection.
         await self.accept()
         print(f"Accepted connection for user {self.user_id}")
 
     async def disconnect(self, close_code):
-        # Remove the user's channel from their group upon disconnection
+        """
+        Called automatically when the connection is closed.
+        """
+        # Clean up by removing the user from their group.
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
@@ -47,63 +64,53 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_user_from_token(self, token_key):
+        """
+        Validates the JWT and retrieves the user from the database.
+        The decorator `@database_sync_to_async` is crucial because database
+        operations are synchronous, but this consumer is asynchronous. This
+        decorator runs the database query safely in a separate thread.
+        """
         if not token_key:
             return None
         try:
             validated_token = AccessToken(token_key)
             user_id = validated_token["user_id"]
-            # FIX: Replace 'username' with 'email'
             return CustomUser.objects.only('id', 'email').get(id=user_id)
         except Exception as e:
             logger.error(f"[TOKEN ERROR] Invalid token: {e}", exc_info=True)
             return None
-        
+            
+    # --- Incoming Message Router ---
+
     async def receive(self, text_data):
         """
-        Receives messages from the client WebSocket and routes them based on 'type'.
+        Called whenever a message is received from a client. It routes the
+        message to the correct handler based on its 'type'.
         """
         data = json.loads(text_data)
         message_type = data.get('type')
 
-        # Route message to the appropriate handler
         if message_type == 'accept_job':
-            service_request_id = data.get('service_request_id')
-            mechanic_user_id = data.get('mechanic_user_id')
-            await self.handle_job_acceptance(service_request_id, mechanic_user_id)
+            # This logic is now handled by the `AcceptServiceRequestView` for better
+            # reliability, but the consumer could also handle it like this.
+            await self.handle_job_acceptance(
+                data.get('service_request_id'), 
+                data.get('mechanic_user_id')
+            )
         
         elif message_type == 'location_update':
+            # This is for the mechanic to update their general location while idle.
             latitude = data.get('latitude')
             longitude = data.get('longitude')
             if latitude and longitude:
                 await self.update_mechanic_location(self.user_id, latitude, longitude)
 
-    # --- Message Handlers ---
-
-    async def handle_job_acceptance(self, service_request_id, mechanic_user_id):
-        """
-        Handles the logic when a mechanic accepts a job.
-        """
-        service_request, user_to_notify = await self.assign_mechanic_to_request(service_request_id, mechanic_user_id)
-
-        if service_request and user_to_notify:
-            # Notify the original user that a mechanic has accepted the job
-            await self.channel_layer.group_send(
-                f'user_{user_to_notify.id}',
-                {
-                    'type': 'mechanic.accepted', 
-                    'mechanic_details': {
-                        'name': service_request.mechanic.user.name,
-                        'mobile_number': service_request.mechanic.user.mobile_number,
-                        'shop_name': service_request.mechanic.shop_name,
-                    }
-                }
-            )
-
-    # --- Group Message Senders (called by server-side logic) ---
+    # --- Handlers for Server-Side Actions ---
 
     async def new_job_notification(self, event):
         """
-        Sends a new job notification to the connected mechanic.
+        This method is triggered by the backend (e.g., from `CreateServiceRequestView`).
+        It sends the 'new_job' message to this specific client's WebSocket.
         """
         await self.send(text_data=json.dumps({
             'type': 'new_job',
@@ -112,7 +119,8 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
 
     async def mechanic_accepted(self, event):
         """
-        Informs the user that a mechanic has accepted their request.
+        This method is triggered by the backend to inform this client (the user)
+        that their request has been successfully accepted by a mechanic.
         """
         await self.send(text_data=json.dumps({
             'type': 'mechanic_accepted',
@@ -124,34 +132,31 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
     @sync_to_async
     def assign_mechanic_to_request(self, service_request_id, mechanic_user_id):
         """
-        Assigns a mechanic to a service request in the database.
-        This runs in a separate thread to avoid blocking the event loop.
+        Assigns a mechanic to a request in the database.
+        The `@sync_to_async` decorator allows this database code to be called from
+        an async method like `handle_job_acceptance`.
         """
         try:
+            # Note: This check isn't atomic. It's safer to use a view with
+            # `select_for_update` to prevent two mechanics from accepting the same job.
             service_request = ServiceRequest.objects.get(id=service_request_id, mechanic__isnull=True)
             mechanic = Mechanic.objects.get(user_id=mechanic_user_id)
-
-            # Assign the mechanic
             service_request.mechanic = mechanic
             service_request.save()
-
             return service_request, service_request.requested_by
         except (ServiceRequest.DoesNotExist, Mechanic.DoesNotExist):
-            # Handles cases where the job was already taken or IDs are invalid
             return None, None
 
     @sync_to_async
     def update_mechanic_location(self, user_id, latitude, longitude):
         """
-        Updates the mechanic's location in the database.
-        This runs in a separate thread to avoid blocking the event loop.
+        Updates a mechanic's general location in the database while they are online
+        and waiting for jobs.
         """
         try:
-            rows_updated = Mechanic.objects.filter(user_id=user_id).update(
+            Mechanic.objects.filter(user_id=user_id).update(
                 current_latitude=latitude,
                 current_longitude=longitude
             )
-            if rows_updated > 0:
-                print(f"Updated location for user {user_id} to {latitude}, {longitude}")
         except Exception as e:
             print(f"Error updating location for user {user_id}: {e}")

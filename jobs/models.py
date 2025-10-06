@@ -1,38 +1,38 @@
 from django.db import models
 from django.conf import settings
-from users.models import Mechanic
+from users.models import Mechanic, CustomUser
+import uuid
+
 
 class ServiceRequest(models.Model):
-    """
-    Represents a job request from a user to be fulfilled by a mechanic.
-    """
-    class StatusChoices(models.TextChoices):
-        PENDING = 'PENDING', 'Pending'
-        ACCEPTED = 'ACCEPTED', 'Accepted'
-        COMPLETED = 'COMPLETED', 'Completed'
-        CANCELLED = 'CANCELLED', 'Cancelled'
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('ACCEPTED', 'Accepted'),
+        ('COMPLETED', 'Completed'),
+        ('CANCELLED', 'Cancelled'),
+        ('EXPIRED', 'Expired'),
+    ]
 
-    requested_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='service_requests'
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='service_requests')
+    assigned_mechanic = models.ForeignKey(
+        Mechanic, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='assigned_requests'
     )
-    mechanic = models.ForeignKey(
-        Mechanic,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='jobs'
-    )
-    status = models.CharField(
-        max_length=10,
-        choices=StatusChoices.choices,
-        default=StatusChoices.PENDING
-    )
-    details = models.TextField()
-    price = models.IntegerField(null=True, blank=True)
-    vehical_type = models.CharField(max_length=200, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+
+    # Location fields
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    location = models.CharField(max_length=255, blank=True, null=True) # User-provided address/location name
+    vehical_type = models.CharField(max_length=100 ,blank=True, null=True)
+    problem=models.TextField(blank=True, null=True) 
+    additional_details=models.TextField(blank=True, null=True)
+    price=models.FloatField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Request from {self.requested_by.email} ({self.get_status_display()})"
+        return f"Request {self.id} for {self.vehical_type} by {self.user.email}"
