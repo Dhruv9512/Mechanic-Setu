@@ -73,6 +73,9 @@ class Mechanic(models.Model):
     shop_name = models.CharField(max_length=255)
     shop_address = models.TextField()
 
+    current_latitude = models.FloatField(null=True, blank=True)
+    current_longitude = models.FloatField(null=True, blank=True)
+
     # Recommended: Use GeoDjango's PointField for efficient location queries.
     # shop_location = gis_models.PointField(null=True, blank=True)
     # Fallback: Simple latitude and longitude fields.
@@ -100,38 +103,3 @@ class Mechanic(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.shop_name}"
-
-
-class ServiceRequest(models.Model):
-    """
-    Represents a job request from a user to be fulfilled by a mechanic.
-    """
-    class StatusChoices(models.TextChoices):
-        PENDING = 'PENDING', 'Pending'
-        ACCEPTED = 'ACCEPTED', 'Accepted'
-        COMPLETED = 'COMPLETED', 'Completed'
-        CANCELLED = 'CANCELLED', 'Cancelled'
-
-    requested_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='service_requests'
-    )
-    mechanic = models.ForeignKey(
-        Mechanic,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='jobs'
-    )
-    status = models.CharField(
-        max_length=10,
-        choices=StatusChoices.choices,
-        default=StatusChoices.PENDING
-    )
-    details = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Request from {self.requested_by.email} ({self.get_status_display()})"
-

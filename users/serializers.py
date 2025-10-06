@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Mechanic, ServiceRequest, CustomUser
+from .models import Mechanic, CustomUser
+from jobs.models import ServiceRequest
 
 
 
