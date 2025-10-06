@@ -147,8 +147,8 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         """
         try:
             rows_updated = Mechanic.objects.filter(user_id=user_id).update(
-                shop_latitude=latitude,
-                shop_longitude=longitude
+                current_latitude=latitude,
+                current_longitude=longitude
             )
             if rows_updated > 0:
                 print(f"Updated location for user {user_id} to {latitude}, {longitude}")
