@@ -95,53 +95,38 @@ class GetBasicNeedsView(APIView):
 
 
 class CreateServiceRequestView(APIView):
-    """
-    Creates a service request and broadcasts it to nearby mechanics.
-    """
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    async def post(self, request):
+    def post(self, request):
         try:
-            # Extract all required and optional fields from the request data
             latitude = float(request.data.get('latitude'))
             longitude = float(request.data.get('longitude'))
-            
             location = request.data.get('location', '')
             vehical_type = request.data.get('vehical_type', '')
             problem = request.data.get('problem', '')
             additional_details = request.data.get('additional_details', '')
 
         except (TypeError, ValueError):
-            return Response({"error": "Invalid data provided for the service request."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Invalid data provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # CORRECT: Use database_sync_to_async to run sync ORM code in a separate thread
-        @database_sync_to_async
-        def create_service_request_sync():
-            return ServiceRequest.objects.create(
-                user=request.user,
-                latitude=latitude,
-                longitude=longitude,
-                location=location,
-                vehical_type=vehical_type,
-                problem=problem,
-                additional_details=additional_details,
-                status='PENDING'
-            )
+        # ORM calls are sync, so fine here
+        service_request = ServiceRequest.objects.create(
+            user=request.user,
+            latitude=latitude,
+            longitude=longitude,
+            location=location,
+            vehical_type=vehical_type,
+            problem=problem,
+            additional_details=additional_details,
+            status='PENDING'
+        )
 
-        service_request = await create_service_request_sync()
-
-        @database_sync_to_async
-        def get_nearby_mechanics_sync():
-            # The original _get_nearby_mechanics is synchronous.
-            # We call it here and evaluate the queryset by converting it to a list.
-            return list(self._get_nearby_mechanics(latitude, longitude))
-
-        mechanics = await get_nearby_mechanics_sync()
+        mechanics = list(self._get_nearby_mechanics(latitude, longitude))
         mechanic_user_ids = [m.user.id for m in mechanics]
-        
-        # CORRECT: Directly await the coroutine instead of using asyncio.run
-        await self._broadcast_to_mechanics(service_request, mechanic_user_ids)
+
+        # run async broadcast synchronously
+        async_to_sync(self._broadcast_to_mechanics)(service_request, mechanic_user_ids)
 
         return Response({
             'message': 'Request sent successfully.',
