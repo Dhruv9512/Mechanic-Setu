@@ -88,7 +88,7 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
                 # Fetch details using the async helper
                 email, shop_name = await get_mechanic_details(user_id)
                 if email and shop_name:
-                    logger.info(f"Mechanic details: Email={email}, Shop={shop_name}")
+                    logger.info(f"Mechanic details: Email={email}, Shop={shop_name}, UserID=user_{user_id}")
 
             except Exception as e:
                 logger.error(f"Failed to send job notification for job {request_id} to user {user_id}: {e}", exc_info=True)

@@ -50,6 +50,7 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         # 4. Accept the connection.
         await self.accept()
         print(f"Accepted connection for user {self.user_id}")
+        
 
     async def disconnect(self, close_code):
         """
