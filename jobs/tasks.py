@@ -83,7 +83,7 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
         logger.info(f"Broadcasting job {request_id} to batch {i//batch_size + 1}: {batch_ids}")
         for user_id in batch_ids:
             try:
-                await channel_layer.group_send(f"user_{user_id}", {'type': 'new_job_notification', 'job': job_details})
+                await channel_layer.group_send(f"user_{user_id}", {'type': 'new_job', 'job': job_details})
                 
                 # Fetch details using the async helper
                 email, shop_name = await get_mechanic_details(user_id)

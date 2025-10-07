@@ -115,14 +115,14 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
 
     # --- Handlers for Server-Side Events (from Celery) ---
 
-    async def new_job_notification(self, event):
+    async def new_job(self, event):
         """
-        Handles the 'new_job_notification' event from the channel layer (Celery).
+        Handles the 'new_job' event from the channel layer (Celery).
         """
-        logger.info(f"[HANDLER] 'new_job_notification' handler triggered for user {self.user_id}.")
+        logger.info(f"[HANDLER] 'new_job' handler triggered for user {self.user_id}.")
         job_details = event.get('job')
         if not job_details:
-            logger.warning(f"[HANDLER] 'new_job_notification' event for user {self.user_id} was missing 'job' data.")
+            logger.warning(f"[HANDLER] 'new_job' event for user {self.user_id} was missing 'job' data.")
             return
 
         payload = {
