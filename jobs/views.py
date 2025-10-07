@@ -101,7 +101,7 @@ class CreateServiceRequestView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    async def post(self, request):
         try:
             # Extract all required and optional fields from the request data
             latitude = float(request.data.get('latitude'))
