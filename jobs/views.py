@@ -115,22 +115,33 @@ class CreateServiceRequestView(APIView):
         except (TypeError, ValueError):
             return Response({"error": "Invalid data provided for the service request."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create the ServiceRequest object with all the new fields
-        service_request = ServiceRequest.objects.create(
-            user=request.user,
-            latitude=latitude,
-            longitude=longitude,
-            location=location,
-            vehical_type=vehical_type,
-            problem=problem,
-            additional_details=additional_details,
-            status='PENDING'
-        )
+        # CORRECT: Use database_sync_to_async to run sync ORM code in a separate thread
+        @database_sync_to_async
+        def create_service_request_sync():
+            return ServiceRequest.objects.create(
+                user=request.user,
+                latitude=latitude,
+                longitude=longitude,
+                location=location,
+                vehical_type=vehical_type,
+                problem=problem,
+                additional_details=additional_details,
+                status='PENDING'
+            )
 
-        mechanics = self._get_nearby_mechanics(latitude, longitude)
+        service_request = await create_service_request_sync()
+
+        @database_sync_to_async
+        def get_nearby_mechanics_sync():
+            # The original _get_nearby_mechanics is synchronous.
+            # We call it here and evaluate the queryset by converting it to a list.
+            return list(self._get_nearby_mechanics(latitude, longitude))
+
+        mechanics = await get_nearby_mechanics_sync()
         mechanic_user_ids = [m.user.id for m in mechanics]
         
-        asyncio.run(self._broadcast_to_mechanics(service_request, mechanic_user_ids))
+        # CORRECT: Directly await the coroutine instead of using asyncio.run
+        await self._broadcast_to_mechanics(service_request, mechanic_user_ids)
 
         return Response({
             'message': 'Request sent successfully.',
@@ -138,6 +149,7 @@ class CreateServiceRequestView(APIView):
         }, status=status.HTTP_201_CREATED)
 
     def _get_nearby_mechanics(self, latitude, longitude, radius=15):
+        # This remains a synchronous method
         lat_r = Radians(latitude)
         lon_r = Radians(longitude)
         mechanics = Mechanic.objects.filter(
@@ -152,6 +164,7 @@ class CreateServiceRequestView(APIView):
         return mechanics
 
     async def _broadcast_to_mechanics(self, service_request, mechanic_user_ids):
+        # This method is already async, which is correct
         channel_layer = get_channel_layer()
         batch_size = 5
         timeout = 30  # 30 seconds
@@ -177,7 +190,7 @@ class CreateServiceRequestView(APIView):
             
             @database_sync_to_async
             def get_request_status_and_assignee(pk):
-                req = ServiceRequest.objects.get(pk=pk)
+                req = ServiceRequest.objects.select_related('assigned_mechanic__user').get(pk=pk)
                 return req.status, req.assigned_mechanic.user.id if req.assigned_mechanic else None
 
             current_status, assignee_id = await get_request_status_and_assignee(service_request.id)
