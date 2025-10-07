@@ -7,6 +7,8 @@ from rest_framework_simplejwt.tokens import AccessToken
 from channels.db import database_sync_to_async
 from .models import ServiceRequest
 import logging
+
+# Set up a specific logger for this module
 logger = logging.getLogger(__name__)
 
 
@@ -20,120 +22,125 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         """
-        This method is called when a client (a user's browser or app)
-        tries to establish a WebSocket connection.
+        Handles an incoming WebSocket connection.
         """
-        # 1. Authenticate the user from the token in the URL.
-        #    The frontend will send its JWT token in the WebSocket URL's query string.
-        #    Example URL: ws://.../?token=...
+        logger.info("[WS-CONNECT] Attempting to connect...")
+        
         query_string = self.scope.get("query_string", b"").decode()
         query_params = parse_qs(query_string)
         token_key = query_params.get("token", [None])[0]
 
+        if not token_key:
+            logger.warning("[WS-CONNECT] Connection rejected: No token provided.")
+            await self.close()
+            return
+
         self.user = await self.get_user_from_token(token_key)
         if not self.user:
-            # If the token is invalid, the connection is rejected.
+            logger.warning("[WS-CONNECT] Connection rejected: Invalid token.")
             await self.close()
             return
 
         self.user_id = self.user.id
-        # 2. Define a unique "room" or "group" name for this user. This acts
-        #    as their private channel for receiving direct notifications.
         self.room_group_name = f'user_{self.user_id}'
         
-        # 3. Add this user's connection to their private group.
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
 
-        # 4. Accept the connection.
         await self.accept()
-        print(f"Accepted connection for user {self.user_id}")
+        logger.info(f"[WS-CONNECT] Accepted connection for user {self.user_id} and added to group '{self.room_group_name}'.")
         
 
     async def disconnect(self, close_code):
         """
-        Called automatically when the connection is closed.
+        Handles a WebSocket disconnection.
         """
-        # Clean up by removing the user from their group.
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
-        print(f"Disconnected user {self.user_id}")
+        if hasattr(self, 'room_group_name'):
+            await self.channel_layer.group_discard(
+                self.room_group_name,
+                self.channel_name
+            )
+            logger.info(f"[WS-DISCONNECT] Disconnected user {getattr(self, 'user_id', 'N/A')}. Removed from group '{self.room_group_name}'. Code: {close_code}")
+        else:
+            logger.info(f"[WS-DISCONNECT] A user disconnected without being added to a group. Code: {close_code}")
 
     @database_sync_to_async
     def get_user_from_token(self, token_key):
         """
         Validates the JWT and retrieves the user from the database.
-        The decorator `@database_sync_to_async` is crucial because database
-        operations are synchronous, but this consumer is asynchronous. This
-        decorator runs the database query safely in a separate thread.
         """
-        if not token_key:
-            return None
+        logger.debug(f"Attempting to validate token...")
         try:
             validated_token = AccessToken(token_key)
             user_id = validated_token["user_id"]
-            return CustomUser.objects.only('id', 'email').get(id=user_id)
+            user = CustomUser.objects.only('id', 'email').get(id=user_id)
+            logger.debug(f"Token validation successful for user_id: {user.id}")
+            return user
         except Exception as e:
-            logger.error(f"[TOKEN ERROR] Invalid token: {e}", exc_info=True)
+            logger.error(f"[TOKEN ERROR] Invalid token provided. Error: {e}", exc_info=False)
             return None
             
     # --- Incoming Message Router ---
 
     async def receive(self, text_data):
         """
-        Called whenever a message is received from a client. It routes the
-        message to the correct handler based on its 'type'.
+        Called whenever a message is received from a client.
         """
-        data = json.loads(text_data)
-        message_type = data.get('type')
+        logger.info(f"[WS-RECEIVE] Received raw message from user {self.user_id}: {text_data}")
+        try:
+            data = json.loads(text_data)
+            message_type = data.get('type')
+            logger.info(f"[WS-RECEIVE] Parsed message type: '{message_type}'")
 
-        if message_type == 'accept_job':
-            # This logic is now handled by the `AcceptServiceRequestView` for better
-            # reliability, but the consumer could also handle it like this.
-            await self.handle_job_acceptance(
-                data.get('service_request_id'), 
-                data.get('mechanic_user_id')
-            )
-        
-        elif message_type == 'location_update':
-            # This is for the mechanic to update their general location while idle.
-            latitude = data.get('latitude')
-            longitude = data.get('longitude')
-            if latitude and longitude:
-                await self.update_mechanic_location(self.user_id, latitude, longitude)
+            if message_type == 'accept_job':
+                await self.handle_job_acceptance(
+                    data.get('service_request_id'), 
+                    data.get('mechanic_user_id')
+                )
+            
+            elif message_type == 'location_update':
+                latitude = data.get('latitude')
+                longitude = data.get('longitude')
+                if latitude and longitude:
+                    await self.update_mechanic_location(self.user_id, latitude, longitude)
+            else:
+                logger.warning(f"[WS-RECEIVE] Unknown message type '{message_type}' from user {self.user_id}.")
+        except json.JSONDecodeError:
+            logger.error(f"[WS-RECEIVE] Failed to parse JSON from message: {text_data}")
+        except Exception as e:
+            logger.error(f"[WS-RECEIVE] Error processing received message: {e}", exc_info=True)
 
-    # --- Handlers for Server-Side Actions ---
+
+    # --- Handlers for Server-Side Events (from Celery) ---
 
     async def new_job_notification(self, event):
         """
-        Extracts job details from the event and sends a structured
-        'new_job' message to the WebSocket client.
+        Handles the 'new_job_notification' event from the channel layer (Celery).
         """
+        logger.info(f"[HANDLER] 'new_job_notification' handler triggered for user {self.user_id}.")
         job_details = event.get('job')
         if not job_details:
-            logger.warning(f"Received new_job_notification event without 'job' data for user {self.scope['user'].id}")
+            logger.warning(f"[HANDLER] 'new_job_notification' event for user {self.user_id} was missing 'job' data.")
             return
 
-        logger.info(f"Sending 'new_job' message to user {self.scope['user'].id} for job {job_details.get('id')}")
-        
-        # Construct a specific, clean payload for the client
-        await self.send(text_data=json.dumps({
-            'type': 'new_job',  # Use a clear type for the frontend
+        payload = {
+            'type': 'new_job',
             'service_request': job_details
-        }))
+        }
+        
+        logger.info(f"[HANDLER] Sending 'new_job' payload to user {self.user_id} for job {job_details.get('id')}.")
+        await self.send(text_data=json.dumps(payload))
 
     async def mechanic_accepted(self, event):
         """
-        This method is triggered by the backend to inform this client (the user)
-        that their request has been successfully accepted by a mechanic.
+        Informs the user that their request has been accepted.
         """
+        logger.info(f"[HANDLER] 'mechanic_accepted' handler triggered for user {self.user_id}.")
         await self.send(text_data=json.dumps({
             'type': 'mechanic_accepted',
-            'mechanic_details': event['mechanic_details']
+            'mechanic_details': event.get('mechanic_details')
         }))
 
     # --- Asynchronous Database Operations ---
@@ -142,30 +149,36 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
     def assign_mechanic_to_request(self, service_request_id, mechanic_user_id):
         """
         Assigns a mechanic to a request in the database.
-        The `@sync_to_async` decorator allows this database code to be called from
-        an async method like `handle_job_acceptance`.
         """
         try:
-            # Note: This check isn't atomic. It's safer to use a view with
-            # `select_for_update` to prevent two mechanics from accepting the same job.
-            service_request = ServiceRequest.objects.get(id=service_request_id, mechanic__isnull=True)
+            service_request = ServiceRequest.objects.get(id=service_request_id, assigned_mechanic__isnull=True)
             mechanic = Mechanic.objects.get(user_id=mechanic_user_id)
-            service_request.mechanic = mechanic
+            service_request.assigned_mechanic = mechanic
+            service_request.status = 'ACCEPTED'
             service_request.save()
-            return service_request, service_request.requested_by
-        except (ServiceRequest.DoesNotExist, Mechanic.DoesNotExist):
+            logger.info(f"Successfully assigned mechanic {mechanic.user.id} to service request {service_request.id}")
+            return service_request, service_request.user
+        except (ServiceRequest.DoesNotExist, Mechanic.DoesNotExist) as e:
+            logger.warning(f"Could not assign mechanic to request. Job may have already been taken. Error: {e}")
             return None, None
+        except Exception as e:
+            logger.error(f"Error in assign_mechanic_to_request: {e}", exc_info=True)
+            return None, None
+
 
     @sync_to_async
     def update_mechanic_location(self, user_id, latitude, longitude):
         """
-        Updates a mechanic's general location in the database while they are online
-        and waiting for jobs.
+        Updates a mechanic's general location in the database.
         """
         try:
-            Mechanic.objects.filter(user_id=user_id).update(
+            rows_updated = Mechanic.objects.filter(user_id=user_id).update(
                 current_latitude=latitude,
                 current_longitude=longitude
             )
+            if rows_updated > 0:
+                logger.info(f"Updated location for user {user_id} to ({latitude}, {longitude})")
+            else:
+                logger.warning(f"Attempted to update location for non-existent mechanic user {user_id}")
         except Exception as e:
-            print(f"Error updating location for user {user_id}: {e}")
+            logger.error(f"Error updating location for user {user_id}: {e}", exc_info=True)
