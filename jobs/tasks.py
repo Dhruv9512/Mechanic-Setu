@@ -13,6 +13,7 @@ from users.models import Mechanic
 # Set up a specific logger for this module
 logger = logging.getLogger(__name__)
 
+
 # --- Helper functions ---
 
 def _get_nearby_mechanics(latitude, longitude, radius=15):
@@ -37,7 +38,21 @@ def _get_nearby_mechanics(latitude, longitude, radius=15):
         return mechanics
     except Exception as e:
         logger.error(f"Error while querying for nearby mechanics: {e}", exc_info=True)
-        return Mechanic.objects.none() # Return an empty queryset on error
+        return Mechanic.objects.none()
+
+# Helper function to safely fetch mechanic details from an async context
+@database_sync_to_async
+def get_mechanic_details(user_id):
+    try:
+        mechanic = Mechanic.objects.select_related('user').get(user_id=user_id)
+        return mechanic.user.email, mechanic.shop_name
+    except Mechanic.DoesNotExist:
+        logger.warning(f"Mechanic with user_id {user_id} not found.")
+        return None, None
+    except Exception as e:
+        logger.error(f"Error fetching details for mechanic {user_id}: {e}", exc_info=True)
+        return None, None
+
 
 async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
     """
@@ -69,7 +84,12 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
         for user_id in batch_ids:
             try:
                 await channel_layer.group_send(f"user_{user_id}", {'type': 'new_job_notification', 'job': job_details})
-                logger.debug(f"mechanic email and shop name: {Mechanic.objects.get(user_id=user_id).user.email}, {Mechanic.objects.get(user_id=user_id).shop_name}")
+                
+                # Fetch details using the async helper
+                email, shop_name = await get_mechanic_details(user_id)
+                if email and shop_name:
+                    logger.debug(f"Mechanic details: Email={email}, Shop={shop_name}")
+
             except Exception as e:
                 logger.error(f"Failed to send job notification for job {request_id} to user {user_id}: {e}", exc_info=True)
 
@@ -94,7 +114,6 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
 
         if current_status == 'ACCEPTED':
             logger.info(f"Job {request_id} was accepted by mechanic (user_id: {assignee_id}). Halting broadcast.")
-            # Notify other mechanics in the broadcast that the job is taken
             for user_id in all_notified_mechanics:
                 if user_id != assignee_id:
                     try:
@@ -102,14 +121,12 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
                             f"user_{user_id}", 
                             {'type': 'job_taken_notification', 'job_id': request_id}
                         )
-                        
                     except Exception as e:
                         logger.error(f"Failed to send 'job taken' notification for job {request_id} to user {user_id}: {e}", exc_info=True)
-            return  # Exit the broadcast loop
+            return
 
         else:
             logger.info(f"Batch timeout for job {request_id}. Notifying mechanics in batch {batch_ids} of expiration.")
-            # Notify the current batch that their specific notification has expired
             for user_id in batch_ids:
                 try:
                     await channel_layer.group_send(
@@ -119,7 +136,6 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
                 except Exception as e:
                     logger.error(f"Failed to send 'job expired' notification for job {request_id} to user {user_id}: {e}", exc_info=True)
 
-    # If the loop completes without the job being accepted
     @database_sync_to_async
     def expire_request(pk):
         try:
@@ -148,7 +164,6 @@ def find_and_notify_mechanics(self, service_request_id):
     try:
         service_request = ServiceRequest.objects.get(id=service_request_id)
         
-        # 1. Find mechanics
         mechanics = list(_get_nearby_mechanics(
             service_request.latitude, 
             service_request.longitude
@@ -162,7 +177,6 @@ def find_and_notify_mechanics(self, service_request_id):
         mechanic_user_ids = [m.user.id for m in mechanics]
         logger.info(f"[Task ID: {task_id}] Found {len(mechanic_user_ids)} mechanics for request {service_request_id}: {mechanic_user_ids}")
 
-        # 2. Broadcast to mechanics
         async_to_sync(_broadcast_to_mechanics)(service_request, mechanic_user_ids)
         
         logger.info(f"[Task ID: {task_id}] Broadcast process completed for service request {service_request_id}.")
@@ -170,9 +184,7 @@ def find_and_notify_mechanics(self, service_request_id):
     except ServiceRequest.DoesNotExist:
         logger.error(f"[Task ID: {task_id}] ServiceRequest with ID {service_request_id} not found.")
     except Exception as e:
-        logger.critical(f"[Task ID: {task_id}] An unexpected critical error occurred in find_and_notify_mechanics task for request {service_request_id}: {e}", exc_info=True)
-        # Depending on your celery setup, you might want to retry the task
-        # self.retry(exc=e, countdown=60)
+        logger.critical(f"[Task ID: {task_id}] An unexpected critical error occurred: {e}", exc_info=True)
     finally:
         logger.info(f"[Task ID: {task_id}] Task for service_request_id: {service_request_id} finished.")
 
