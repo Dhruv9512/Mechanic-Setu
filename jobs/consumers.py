@@ -110,12 +110,20 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
 
     async def new_job_notification(self, event):
         """
-        This method is triggered by the backend (e.g., from `CreateServiceRequestView`).
-        It sends the 'new_job' message to this specific client's WebSocket.
+        Extracts job details from the event and sends a structured
+        'new_job' message to the WebSocket client.
         """
+        job_details = event.get('job')
+        if not job_details:
+            logger.warning(f"Received new_job_notification event without 'job' data for user {self.scope['user'].id}")
+            return
+
+        logger.info(f"Sending 'new_job' message to user {self.scope['user'].id} for job {job_details.get('id')}")
+        
+        # Construct a specific, clean payload for the client
         await self.send(text_data=json.dumps({
-            'type': 'new_job',
-            'service_request': event['service_request']
+            'type': 'new_job',  # Use a clear type for the frontend
+            'service_request': job_details
         }))
 
     async def mechanic_accepted(self, event):
