@@ -106,7 +106,7 @@ class CreateServiceRequestView(APIView):
             # Extract all required and optional fields from the request data
             latitude = float(request.data.get('latitude'))
             longitude = float(request.data.get('longitude'))
-            service_type = request.data.get('service_type')
+            
             location = request.data.get('location', '')
             vehical_type = request.data.get('vehical_type', '')
             problem = request.data.get('problem', '')
@@ -120,7 +120,6 @@ class CreateServiceRequestView(APIView):
             user=request.user,
             latitude=latitude,
             longitude=longitude,
-            service_type=service_type,
             location=location,
             vehical_type=vehical_type,
             problem=problem,
@@ -164,7 +163,6 @@ class CreateServiceRequestView(APIView):
             'id': str(service_request.id),
             'latitude': service_request.latitude,
             'longitude': service_request.longitude,
-            'service_type': service_request.service_type,
             'location': service_request.location,
             'vehical_type': service_request.vehical_type,
             'problem': service_request.problem,
