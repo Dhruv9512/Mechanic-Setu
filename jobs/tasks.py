@@ -69,6 +69,7 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
         for user_id in batch_ids:
             try:
                 await channel_layer.group_send(f"user_{user_id}", {'type': 'new_job_notification', 'job': job_details})
+                logger.debug(f"mechanic email and shop name: {Mechanic.objects.get(user_id=user_id).user.email}, {Mechanic.objects.get(user_id=user_id).shop_name}")
             except Exception as e:
                 logger.error(f"Failed to send job notification for job {request_id} to user {user_id}: {e}", exc_info=True)
 
@@ -101,6 +102,7 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
                             f"user_{user_id}", 
                             {'type': 'job_taken_notification', 'job_id': request_id}
                         )
+                        
                     except Exception as e:
                         logger.error(f"Failed to send 'job taken' notification for job {request_id} to user {user_id}: {e}", exc_info=True)
             return  # Exit the broadcast loop
