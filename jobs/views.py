@@ -144,8 +144,12 @@ class AcceptServiceRequestView(APIView):
                     async_to_sync(channel_layer.group_send)(
                         f"user_{sr_locked.user.id}",
                         {
-                            'type': 'job_accepted_notification',
-                            'job': { 'id': str(sr_locked.id), 'mechanic_name': mechanic.user.get_full_name() }
+                            'type': 'mechanic.accepted',  # FIX: Change to 'mechanic.accepted'
+                            'mechanic_details': {
+                                'name': mechanic.user.get_full_name(),
+                                'shop_name': mechanic.shop_name,
+                                # Add any other details you want to send to the user
+                            }
                         }
                     )
                     return Response({'message': 'Request accepted!'}, status=status.HTTP_200_OK)
