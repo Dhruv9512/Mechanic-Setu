@@ -14,12 +14,10 @@ from users.models import Mechanic
 logger = logging.getLogger(__name__)
 
 
-# --- Helper functions ---
+# --- Helper functions (NO CHANGES NEEDED HERE) ---
 
 def _get_nearby_mechanics(latitude, longitude, radius=15):
-    """
-    Finds verified, online mechanics within a given radius.
-    """
+    # ... your existing code ...
     logger.info(f"Searching for mechanics near (lat: {latitude}, lon: {longitude}) within {radius}km.")
     lat_r = Radians(latitude)
     lon_r = Radians(longitude)
@@ -40,9 +38,9 @@ def _get_nearby_mechanics(latitude, longitude, radius=15):
         logger.error(f"Error while querying for nearby mechanics: {e}", exc_info=True)
         return Mechanic.objects.none()
 
-# Helper function to safely fetch mechanic details from an async context
 @database_sync_to_async
 def get_mechanic_details(user_id):
+    # ... your existing code ...
     try:
         mechanic = Mechanic.objects.select_related('user').get(user_id=user_id)
         return mechanic.user.email, mechanic.shop_name
@@ -53,11 +51,8 @@ def get_mechanic_details(user_id):
         logger.error(f"Error fetching details for mechanic {user_id}: {e}", exc_info=True)
         return None, None
 
-
 async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
-    """
-    Notifies batches of mechanics about a new service request.
-    """
+    # ... your existing code, no changes needed ...
     channel_layer = get_channel_layer()
     batch_size = 5
     timeout = 30  # 30 seconds
@@ -84,12 +79,9 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
         for user_id in batch_ids:
             try:
                 await channel_layer.group_send(f"user_{user_id}", {'type': 'new_job', 'service_request': job_details})
-                
-                # Fetch details using the async helper
                 email, shop_name = await get_mechanic_details(user_id)
                 if email and shop_name:
                     logger.info(f"Mechanic details: Email={email}, Shop={shop_name}, UserID=user_{user_id}")
-
             except Exception as e:
                 logger.error(f"Failed to send job notification for job {request_id} to user {user_id}: {e}", exc_info=True)
 
@@ -104,7 +96,6 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
                 logger.debug(f"Checked status for job {pk}: Status is {req.status}, Assignee is {assignee}")
                 return req.status, assignee
             except ServiceRequest.DoesNotExist:
-                logger.warning(f"ServiceRequest {pk} not found during status check.")
                 return None, None
             except Exception as e_db:
                 logger.error(f"DB error checking status for job {pk}: {e_db}", exc_info=True)
@@ -124,7 +115,6 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
                     except Exception as e:
                         logger.error(f"Failed to send 'job taken' notification for job {request_id} to user {user_id}: {e}", exc_info=True)
             return
-
         else:
             logger.info(f"Batch timeout for job {request_id}. Notifying mechanics in batch {batch_ids} of expiration.")
             for user_id in batch_ids:
@@ -151,15 +141,14 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
     else:
         logger.warning(f"Attempted to expire job {request_id}, but it was not in PENDING state or was not found.")
 
-# --- Celery Task ---
 
-@shared_task(bind=True, name="find_and_notify_mechanics")
-def find_and_notify_mechanics(self, service_request_id):
+# 2. Define a standard function for the background task
+def find_and_notify_mechanics_thread_task(service_request_id):
     """
-    Celery task to find and notify mechanics.
+    This function runs in a separate thread to find and notify mechanics.
+    The logic is identical to the original Celery task.
     """
-    task_id = self.request.id
-    logger.info(f"[Task ID: {task_id}] Starting task for service_request_id: {service_request_id}")
+    logger.info(f"[Thread Task] Starting for service_request_id: {service_request_id}")
     
     try:
         service_request = ServiceRequest.objects.get(id=service_request_id)
@@ -170,22 +159,21 @@ def find_and_notify_mechanics(self, service_request_id):
         ))
         
         if not mechanics:
-            logger.warning(f"[Task ID: {task_id}] No online or verified mechanics found for service request {service_request_id}. The request will expire.")
+            logger.warning(f"[Thread Task] No online or verified mechanics found for service request {service_request_id}. The request will expire.")
             ServiceRequest.objects.filter(id=service_request_id, status='PENDING').update(status='EXPIRED')
             return f"No mechanics found for request {service_request_id}."
 
         mechanic_user_ids = [m.user.id for m in mechanics]
-        logger.info(f"[Task ID: {task_id}] Found {len(mechanic_user_ids)} mechanics for request {service_request_id}: {mechanic_user_ids}")
+        logger.info(f"[Thread Task] Found {len(mechanic_user_ids)} mechanics for request {service_request_id}: {mechanic_user_ids}")
 
+        # `async_to_sync` correctly handles running async code from a sync thread
         async_to_sync(_broadcast_to_mechanics)(service_request, mechanic_user_ids)
         
-        logger.info(f"[Task ID: {task_id}] Broadcast process completed for service request {service_request_id}.")
+        logger.info(f"[Thread Task] Broadcast process completed for service request {service_request_id}.")
 
     except ServiceRequest.DoesNotExist:
-        logger.error(f"[Task ID: {task_id}] ServiceRequest with ID {service_request_id} not found.")
+        logger.error(f"[Thread Task] ServiceRequest with ID {service_request_id} not found.")
     except Exception as e:
-        logger.critical(f"[Task ID: {task_id}] An unexpected critical error occurred: {e}", exc_info=True)
+        logger.critical(f"[Thread Task] An unexpected critical error occurred: {e}", exc_info=True)
     finally:
-        logger.info(f"[Task ID: {task_id}] Task for service_request_id: {service_request_id} finished.")
-
-    return f"Task for request {service_request_id} completed."
+        logger.info(f"[Thread Task] Task for service_request_id: {service_request_id} finished.")

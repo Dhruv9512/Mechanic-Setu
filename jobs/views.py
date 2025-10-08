@@ -1,3 +1,4 @@
+import threading
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from core.authentication import CookieJWTAuthentication
@@ -12,7 +13,7 @@ from django.utils.decorators import method_decorator
 from django.db import transaction
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from .tasks import find_and_notify_mechanics
+from .tasks import find_and_notify_mechanics_thread_task
 
 import logging
 logger = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ class GetBasicNeedsView(APIView):
 
 # View to create a new service request.
 class CreateServiceRequestView(APIView):
-    authentication_classes = [CookieJWTAuthentication]
+    # authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -100,11 +101,9 @@ class CreateServiceRequestView(APIView):
             vehical_type = request.data.get('vehical_type', '')
             problem = request.data.get('problem', '')
             additional_details = request.data.get('additional_details', '')
-
         except (TypeError, ValueError):
             return Response({"error": "Invalid data provided for the service request."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create the service request object
         service_request = ServiceRequest.objects.create(
             user=request.user,
             latitude=latitude,
@@ -116,13 +115,20 @@ class CreateServiceRequestView(APIView):
             status='PENDING'
         )
 
-        # *** CHANGE: Trigger the background task and respond immediately ***
-        find_and_notify_mechanics.delay(service_request.id)
+        # 3. Instead of Celery, start a new thread to run the task
+        thread = threading.Thread(
+            target=find_and_notify_mechanics_thread_task,
+            args=(service_request.id,) # The comma is important for a single-item tuple
+        )
+        # Setting daemon to True ensures the thread won't block the main process from exiting
+        thread.daemon = True 
+        thread.start()
 
         return Response({
             'message': 'Request sent successfully. We are finding a mechanic for you.',
             'request_id': service_request.id
         }, status=status.HTTP_201_CREATED)
+
 
 class AcceptServiceRequestView(APIView):
     authentication_classes = [CookieJWTAuthentication]
