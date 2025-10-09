@@ -141,21 +141,27 @@ class AcceptServiceRequestView(APIView):
                 
                 if sr_locked.status == 'PENDING':
                     mechanic_profile = Mechanic.objects.select_for_update().get(user=request.user)
-                    mechanic = mechanic_profile
                     sr_locked.status = 'ACCEPTED'
-                    sr_locked.assigned_mechanic = mechanic
+                    sr_locked.assigned_mechanic = mechanic_profile
                     sr_locked.save()
+
+                    # --- FIX: Serialize the mechanic's details ---
+                    mechanic_data = {
+                        'id': mechanic_profile.user.id,
+                        'first_name': mechanic_profile.user.first_name,
+                        'last_name': mechanic_profile.user.last_name,
+                        'phone_number': str(mechanic_profile.user.phone_number), # Ensure phone is a string
+                        'current_latitude': mechanic_profile.current_latitude,
+                        'current_longitude': mechanic_profile.current_longitude,
+                    }
 
                     channel_layer = get_channel_layer()
                     async_to_sync(channel_layer.group_send)(
                         f"user_{sr_locked.user.id}",
                         {
-                            'type': 'mechanic.accepted',  # FIX: Change to 'mechanic.accepted'
-                            'mechanic_details': {
-                                'name': mechanic.user.get_full_name(),
-                                'shop_name': mechanic.shop_name,
-                                # Add any other details you want to send to the user
-                            }
+                            'type': 'mechanic_accepted',
+                            'mechanic_details': mechanic_data,
+                            'job_id': sr_locked.id,
                         }
                     )
                     return Response({'message': 'Request accepted!'}, status=status.HTTP_200_OK)

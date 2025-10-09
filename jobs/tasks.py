@@ -69,6 +69,10 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
         'vehical_type': service_request.vehical_type,
         'problem': service_request.problem,
         'additional_details': service_request.additional_details,
+        'first_name': service_request.user.first_name,
+        'last_name': service_request.user.last_name,
+        'user_profile_pic':service_request.user.profile_pic,
+        'mobile_number':service_request.user.mobile_number,
     }
 
     for i in range(0, len(mechanic_user_ids), batch_size):

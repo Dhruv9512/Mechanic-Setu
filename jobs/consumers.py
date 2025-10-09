@@ -42,29 +42,38 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             return
 
         self.user_id = self.user.id
-        self.room_group_name = f'user_{self.user_id}'
+        self.personal_room_name = f'user_{self.user_id}'
+        self.job_room_name = None # To store the job-specific room name
         
         await self.channel_layer.group_add(
-            self.room_group_name,
+            self.personal_room_name,
             self.channel_name
         )
 
         await self.accept()
-        logger.info(f"[WS-CONNECT] Accepted connection for user {self.user_id} and added to group '{self.room_group_name}'.")
+        logger.info(f"[WS-CONNECT] Accepted connection for user {self.user_id} and added to group '{self.personal_room_name}'.")
         
 
     async def disconnect(self, close_code):
         """
         Handles a WebSocket disconnection.
         """
-        if hasattr(self, 'room_group_name'):
+        # Discard from personal group
+        if hasattr(self, 'personal_room_name'):
             await self.channel_layer.group_discard(
-                self.room_group_name,
+                self.personal_room_name,
                 self.channel_name
             )
-            logger.info(f"[WS-DISCONNECT] Disconnected user {getattr(self, 'user_id', 'N/A')}. Removed from group '{self.room_group_name}'. Code: {close_code}")
-        else:
-            logger.info(f"[WS-DISCONNECT] A user disconnected without being added to a group. Code: {close_code}")
+        
+        # Discard from job-specific group if connected
+        if hasattr(self, 'job_room_name') and self.job_room_name:
+            await self.channel_layer.group_discard(
+                self.job_room_name,
+                self.channel_name
+            )
+
+        logger.info(f"[WS-DISCONNECT] Disconnected user {getattr(self, 'user_id', 'N/A')}. Code: {close_code}")
+
 
     @database_sync_to_async
     def get_user_from_token(self, token_key):
@@ -94,35 +103,79 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             message_type = data.get('type')
             logger.info(f"[WS-RECEIVE] Parsed message type: '{message_type}'")
 
-            if message_type == 'accept_job':
-                await self.handle_job_acceptance(
-                    data.get('service_request_id'), 
-                    data.get('mechanic_user_id')
-                )
+            # --- ROUTER LOGIC UPDATED ---
+            if message_type == 'join_job_room':
+                await self.join_job_room(data)
             
             elif message_type == 'location_update':
-                latitude = data.get('latitude')
-                longitude = data.get('longitude')
-                if latitude and longitude:
-                    await self.update_mechanic_location(self.user_id, latitude, longitude)
+                await self.handle_location_update(data)
+
+            # (You can add more handlers here like 'send_chat_message', etc.)
+            
             else:
                 logger.warning(f"[WS-RECEIVE] Unknown message type '{message_type}' from user {self.user_id}.")
+
         except json.JSONDecodeError:
             logger.error(f"[WS-RECEIVE] Failed to parse JSON from message: {text_data}")
         except Exception as e:
             logger.error(f"[WS-RECEIVE] Error processing received message: {e}", exc_info=True)
 
 
-    # --- Handlers for Server-Side Events (from Celery) ---
+    # --- Handlers for Client-Side Events ---
+
+    async def join_job_room(self, event):
+        """
+        Adds the user/mechanic to a private room for a specific job.
+        """
+        job_id = event.get('job_id')
+        if job_id:
+            self.job_room_name = f"job_{job_id}"
+            await self.channel_layer.group_add(
+                self.job_room_name,
+                self.channel_name
+            )
+            logger.info(f"User {self.user_id} joined room '{self.job_room_name}'")
+            # Optional: Send a confirmation back to the client
+            await self.send(text_data=json.dumps({
+                'type': 'room_joined_confirmation',
+                'job_id': job_id,
+                'message': f"Successfully joined room for job {job_id}."
+            }))
+
+    async def handle_location_update(self, data):
+        """
+        Handles a mechanic's location update and broadcasts it to the job room.
+        """
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        job_id = data.get('job_id') # Client MUST now send the job_id
+
+        if latitude and longitude and job_id:
+            # Update location in DB (good practice)
+            await self.update_mechanic_location(self.user_id, latitude, longitude)
+            
+            # Broadcast the location to the private job room
+            job_room = f"job_{job_id}"
+            await self.channel_layer.group_send(
+                job_room,
+                {
+                    'type': 'mechanic_location', # New handler type for the group
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'mechanic_id': self.user_id,
+                }
+            )
+
+    # --- Handlers for Server-Side Group Events ---
 
     async def new_job(self, event):
         """
-        Handles the 'new_job' event from the channel layer (Celery).
+        Handles the 'new_job' event from the channel layer.
         """
         logger.info(f"[HANDLER] 'new_job' handler triggered for user {self.user_id}.")
         job_details = event.get('service_request')
         if not job_details:
-            logger.warning(f"[HANDLER] 'new_job' event for user {self.user_id} was missing 'service_request' data.")
+            logger.warning(f"[HANDLER] 'new_job' event was missing 'service_request' data.")
             return
 
         payload = {
@@ -130,41 +183,32 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             'service_request': job_details
         }
         
-        logger.info(f"[HANDLER] Sending 'new_job' payload to user {self.user_id} for job {job_details.get('id')}.")
         await self.send(text_data=json.dumps(payload))
 
     async def mechanic_accepted(self, event):
         """
-        Informs the user that their request has been accepted.
+        Informs the user that their request has been accepted and provides the job_id.
         """
         logger.info(f"[HANDLER] 'mechanic_accepted' handler triggered for user {self.user_id}.")
         await self.send(text_data=json.dumps({
             'type': 'mechanic_accepted',
-            'mechanic_details': event.get('mechanic_details')
+            'mechanic_details': event.get('mechanic_details'),
+            'job_id': event.get('job_id') # Pass the job_id to the client
         }))
 
+    async def mechanic_location(self, event):
+        """
+        Receives a location from the group and sends it to the client (the user).
+        """
+        await self.send(text_data=json.dumps({
+            'type': 'mechanic_location_update',
+            'latitude': event.get('latitude'),
+            'longitude': event.get('longitude'),
+            'mechanic_id': event.get('mechanic_id'),
+        }))
+
+
     # --- Asynchronous Database Operations ---
-
-    @sync_to_async
-    def assign_mechanic_to_request(self, service_request_id, mechanic_user_id):
-        """
-        Assigns a mechanic to a request in the database.
-        """
-        try:
-            service_request = ServiceRequest.objects.get(id=service_request_id, assigned_mechanic__isnull=True)
-            mechanic = Mechanic.objects.get(user_id=mechanic_user_id)
-            service_request.assigned_mechanic = mechanic
-            service_request.status = 'ACCEPTED'
-            service_request.save()
-            logger.info(f"Successfully assigned mechanic {mechanic.user.id} to service request {service_request.id}")
-            return service_request, service_request.user
-        except (ServiceRequest.DoesNotExist, Mechanic.DoesNotExist) as e:
-            logger.warning(f"Could not assign mechanic to request. Job may have already been taken. Error: {e}")
-            return None, None
-        except Exception as e:
-            logger.error(f"Error in assign_mechanic_to_request: {e}", exc_info=True)
-            return None, None
-
 
     @sync_to_async
     def update_mechanic_location(self, user_id, latitude, longitude):
