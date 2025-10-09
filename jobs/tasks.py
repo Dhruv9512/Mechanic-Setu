@@ -1,11 +1,10 @@
-from celery import shared_task
+import asyncio
+import logging
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from channels.db import database_sync_to_async
 from django.db.models import F
 from django.db.models.functions import Radians, Sin, Cos, Sqrt, Power
-import asyncio
-import logging
 
 from .models import ServiceRequest
 from users.models import Mechanic
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 # --- Helper functions (NO CHANGES NEEDED HERE) ---
 
 def _get_nearby_mechanics(latitude, longitude, radius=15):
-    # ... your existing code ...
     logger.info(f"Searching for mechanics near (lat: {latitude}, lon: {longitude}) within {radius}km.")
     lat_r = Radians(latitude)
     lon_r = Radians(longitude)
@@ -40,7 +38,6 @@ def _get_nearby_mechanics(latitude, longitude, radius=15):
 
 @database_sync_to_async
 def get_mechanic_details(user_id):
-    # ... your existing code ...
     try:
         mechanic = Mechanic.objects.select_related('user').get(user_id=user_id)
         return mechanic.user.email, mechanic.shop_name
@@ -52,7 +49,6 @@ def get_mechanic_details(user_id):
         return None, None
 
 async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
-    # ... your existing code, no changes needed ...
     channel_layer = get_channel_layer()
     batch_size = 5
     timeout = 30  # 30 seconds
@@ -69,10 +65,11 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
         'vehical_type': service_request.vehical_type,
         'problem': service_request.problem,
         'additional_details': service_request.additional_details,
+        # These are now safe to access because of select_related('user')
         'first_name': service_request.user.first_name,
         'last_name': service_request.user.last_name,
-        'user_profile_pic':service_request.user.profile_pic,
-        'mobile_number':service_request.user.mobile_number,
+        'user_profile_pic': service_request.user.profile_pic,
+        'mobile_number': service_request.user.mobile_number,
     }
 
     for i in range(0, len(mechanic_user_ids), batch_size):
@@ -146,16 +143,19 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
         logger.warning(f"Attempted to expire job {request_id}, but it was not in PENDING state or was not found.")
 
 
-# 2. Define a standard function for the background task
+# --- Main Thread Task Function ---
+
 def find_and_notify_mechanics_thread_task(service_request_id):
     """
     This function runs in a separate thread to find and notify mechanics.
-    The logic is identical to the original Celery task.
     """
     logger.info(f"[Thread Task] Starting for service_request_id: {service_request_id}")
     
     try:
-        service_request = ServiceRequest.objects.get(id=service_request_id)
+        # === FIX APPLIED HERE ===
+        # Proactively fetch the related 'user' object to prevent lazy-loading
+        # in the async context later on.
+        service_request = ServiceRequest.objects.select_related('user').get(id=service_request_id)
         
         mechanics = list(_get_nearby_mechanics(
             service_request.latitude, 

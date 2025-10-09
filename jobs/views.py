@@ -115,7 +115,7 @@ class CreateServiceRequestView(APIView):
             status='PENDING'
         )
 
-        # 3. Instead of Celery, start a new thread to run the task
+        # Start a new thread to run the task
         thread = threading.Thread(
             target=find_and_notify_mechanics_thread_task,
             args=(service_request.id,) # The comma is important for a single-item tuple
@@ -131,7 +131,7 @@ class CreateServiceRequestView(APIView):
 
 
 class AcceptServiceRequestView(APIView):
-    authentication_classes = [CookieJWTAuthentication]
+    # authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, request_id):
@@ -145,7 +145,6 @@ class AcceptServiceRequestView(APIView):
                     sr_locked.assigned_mechanic = mechanic_profile
                     sr_locked.save()
 
-                    # --- FIX: Serialize the mechanic's details ---
                     mechanic_data = {
                         'id': mechanic_profile.user.id,
                         'first_name': mechanic_profile.user.first_name,
