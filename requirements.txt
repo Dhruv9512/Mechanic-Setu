@@ -34,4 +34,5 @@ django-jet-reboot
 django-phonenumber-field[phonenumbers]
 sib-api-v3-sdk
 weasyprint
+pytz
 vercel-blob
