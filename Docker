@@ -6,30 +6,39 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # Install system dependencies
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+# This is the updated list for your project's needs.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # For compiling Python packages if needed (like brotli, zopfli)
     build-essential \
-    pkg-config \
-    libmariadb-dev \
-    libmariadb-dev-compat \
-    libcairo2-dev \
+    # For psycopg, the PostgreSQL driver
+    libpq-dev \
+    # For WeasyPrint PDF generation
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    # A lightweight init system for running in containers
     tini \
+    # Clean up apt cache to keep the image small
     && rm -rf /var/lib/apt/lists/*
 
 # Set workdir
 WORKDIR /app
 
-# Install Python requirements
+# Install uv, the fast Python package installer
+RUN pip install uv
+
+# Install Python requirements using uv
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . .
 
-# Copy entrypoint
+# Copy entrypoint script and make it executable
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Expose Daphne port
 EXPOSE 8000
 
+# Set the entrypoint for the container
 ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]

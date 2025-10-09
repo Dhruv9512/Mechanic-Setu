@@ -15,7 +15,7 @@ channels_redis
 # Database and Cache
 django-redis
 redis
-psycopg2-binary
+psycopg
 
 # Environment and Settings Management
 dj-database-url
@@ -33,5 +33,5 @@ google-auth-httplib2
 django-jet-reboot
 django-phonenumber-field[phonenumbers]
 sib-api-v3-sdk
-xhtml2pdf
+weasyprint
 vercel-blob

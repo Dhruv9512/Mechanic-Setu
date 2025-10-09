@@ -3,7 +3,7 @@ from django.conf import settings
 from django.core.cache import cache
 from vercel_blob import put
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated , IsAdminUser
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,35 +12,34 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 
-from  core.authentication import generate_otp,CookieJWTAuthentication
-
+from core.authentication import generate_otp, CookieJWTAuthentication
 from .models import CustomUser, Mechanic
 
 import logging
 import os
 from django.template.loader import render_to_string
-from io import BytesIO 
-from xhtml2pdf import pisa 
+from io import BytesIO
+# --- MODIFICATION: Swapped PDF generation libraries ---
+from weasyprint import HTML # Replaced xhtml2pdf with WeasyPrint
 
-from core.cache import cache_per_user, generate_user_cache_key,delete_all_user_cache
-# --- IMPORT THE NEW SERIALIZERS ---
+from core.cache import cache_per_user, generate_user_cache_key, delete_all_user_cache
 from .serializers import (
-    UserSerializer, 
-    MechanicSerializer, 
-    SetUsersDetailsSerializer, 
+    UserSerializer,
+    MechanicSerializer,
+    SetUsersDetailsSerializer,
     SetMechanicDetailViewSerializer
 )
-
 from .tasks import (
-    Otp_Verification, 
+    Otp_Verification,
     send_login_success_email,
     Send_Mechanic_Login_Successful_Email,
     Send_Mechanic_Otp_Verification,
     get_current_datetime,
     send_kyc_submission_email,
-    send_kyc_approved_email, 
-    send_kyc_rejected_email 
+    send_kyc_approved_email,
+    send_kyc_rejected_email
 )
+
 logger = logging.getLogger(__name__)
 
 # -------------------------
@@ -49,8 +48,8 @@ logger = logging.getLogger(__name__)
 
 ACCESS_COOKIE = "access"
 REFRESH_COOKIE = "refresh"
-ACCESS_MAX_AGE = 30 * 60                 # 30 minutes
-REFRESH_MAX_AGE = 7 * 24 * 60 * 60       # 7 days
+ACCESS_MAX_AGE = 30 * 60                # 30 minutes
+REFRESH_MAX_AGE = 7 * 24 * 60 * 60      # 7 days
 OTP_TTL_SECONDS = 140
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
@@ -113,7 +112,6 @@ class OtpVerificationView(APIView):
             logger.error("Token generation failed for %s: %s", user.email, str(e))
             return Response({"error": "Failed to generate tokens."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # Invalidate OTP
         cache.delete(key)
 
         response_data = {
@@ -229,7 +227,6 @@ class Google_Login_SignupView(APIView):
             logger.error("JWT generation failed for %s: %s", email, e)
             return Response({"error": "Failed to generate tokens"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # --- MODIFICATION: Return user data along with the success message ---
         response_data = {
             "message": "Login Successful",
             "status": status_message,
@@ -247,19 +244,13 @@ class Google_Login_SignupView(APIView):
 
         return response
 
-# --- REFACTORED VIEW ---
+
 class SetUsersDetail(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """
-        Handles updating user profile details using a serializer.
-        This approach replaces manual field checking with robust validation.
-        """
-
         user = request.user
-        # `partial=True` allows for updating only a subset of fields.
         serializer = SetUsersDetailsSerializer(user, data=request.data, partial=True)
         
         if serializer.is_valid():
@@ -303,22 +294,15 @@ class ResendOtpView(APIView):
             return Response({"error": "Something went wrong."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
 # ---------------------------Mechanic Views---------------------------
 class SetMechanicDetailView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """
-        Handles creation/update of a mechanic's profile.
-        This view now uses two serializers to handle the user part and the mechanic part separately.
-        It also uses `update_or_create` for robustly handling both new and existing mechanic profiles.
-        """
         user = request.user
         mutable_data = request.data.copy()
 
-        # 1. Handle profile picture upload
         profile_pic = request.FILES.get('profile_pic')
         if profile_pic:
             try:
@@ -329,16 +313,17 @@ class SetMechanicDetailView(APIView):
             except Exception as e:
                 logger.error(f"File upload failed: {e}")
                 return Response({"error": "File upload failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        first_name = mutable_data.pop('first_name', None)[0]
-        last_name = mutable_data.pop('last_name', None)[0]
-        mobile_number = mutable_data.pop('mobile_number', None)[0]
-        profile_pic = mutable_data.get('profile_pic', None)
+        
+        first_name = mutable_data.pop('first_name', [user.first_name])[0]
+        last_name = mutable_data.pop('last_name', [user.last_name])[0]
+        mobile_number = mutable_data.pop('mobile_number', [user.mobile_number])[0]
+        profile_pic_url = mutable_data.get('profile_pic', user.profile_pic)
 
         user_serializer = SetUsersDetailsSerializer(user, data={
-            "first_name": first_name or user.first_name,
-            "last_name": last_name or user.last_name,
-            "mobile_number": mobile_number or user.mobile_number,
-            "profile_pic": profile_pic or user.profile_pic,
+            "first_name": first_name,
+            "last_name": last_name,
+            "mobile_number": mobile_number,
+            "profile_pic": profile_pic_url,
         }, partial=True)
         if not user_serializer.is_valid():
             return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -348,44 +333,36 @@ class SetMechanicDetailView(APIView):
         if not mechanic_serializer.is_valid():
             return Response(mechanic_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        # 3. Create or update the mechanic profile linked to the user
         mechanic, created = Mechanic.objects.update_or_create(
             user=user,
             defaults=mechanic_serializer.validated_data
         )
 
-         # --- START: PDF GENERATION LOGIC ---
-         # --- START: UPDATED PDF GENERATION LOGIC for xhtml2pdf ---
+        # --- START: UPDATED PDF GENERATION LOGIC with WeasyPrint ---
         try:
-            # 1. Prepare context (same as before)
             context = {
                 'user': user,
                 'mechanic': mechanic,
                 'timestamp': get_current_datetime()
             }
-            # 2. Render the HTML template to a string (same as before)
             html_string = render_to_string('mechanic_agreement.html', context)
             
-            # 3. Generate PDF in memory
-            result = BytesIO() # Create an in-memory binary file
-            pdf = pisa.CreatePDF(BytesIO(html_string.encode("UTF-8")), dest=result)
+            # Generate PDF in memory using WeasyPrint
+            pdf_bytes = HTML(string=html_string).write_pdf()
 
-            if not pdf.err:
-                # 4. Upload the generated PDF
-                pdf_path = f"Mechanic_Agreements/agreement-{user.id}-{mechanic.id}.pdf"
-                # Use result.getvalue() to get the byte content of the PDF
-                pdf_blob = put(pdf_path, result.getvalue())
-                pdf_url = pdf_blob["url"]
+            # Upload the generated PDF
+            pdf_path = f"Mechanic_Agreements/agreement-{user.id}-{mechanic.id}.pdf"
+            pdf_blob = put(pdf_path, pdf_bytes)
+            pdf_url = pdf_blob["url"]
 
-                # 5. Save the PDF URL to the mechanic's profile
-                mechanic.KYC_document = pdf_url
-                mechanic.save(update_fields=['KYC_document'])
-                logger.info(f"Successfully generated agreement for mechanic {mechanic.id} with xhtml2pdf")
-            else:
-                logger.error(f"xhtml2pdf error for mechanic {mechanic.id}: {pdf.err}")
+            # Save the PDF URL to the mechanic's profile
+            mechanic.KYC_document = pdf_url
+            mechanic.save(update_fields=['KYC_document'])
+            logger.info(f"Successfully generated agreement for mechanic {mechanic.id} with WeasyPrint")
 
         except Exception as e:
             logger.error(f"Failed to generate agreement PDF for mechanic {mechanic.id}: {e}")
+        # --- END: UPDATED PDF GENERATION LOGIC ---
 
         try:
             send_kyc_submission_email.delay({
@@ -395,34 +372,26 @@ class SetMechanicDetailView(APIView):
             })
         except Exception as e:
             logger.warning(f"Failed to enqueue KYC submission email for {user.email}: {e}")
-        # --- END: UPDATED PDF GENERATION LOGIC ---
+        
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         message = "Mechanic profile created successfully." if created else "Mechanic profile updated successfully."
     
         return Response({
             "message": message,
         }, status=status_code)
-    
+
 # ---------------------------Admin Views---------------------------
 
-# View to get all unverified mechanics
 class GetMechanicDetailForVerifyView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
-        # 1. Fetch all mechanics where 'is_verified' is False.
-        #    This will return a list (queryset) of mechanics.
         unverified_mechanics = Mechanic.objects.filter(is_verified=False)
-
-        # 2. Serialize the list of mechanics.
-        #    'many=True' tells the serializer to expect and handle a list of objects.
         serializer = MechanicSerializer(unverified_mechanics, many=True)
-
-        # 3. Return the serialized data.
-        #    If no unverified mechanics are found, this will correctly return an empty list: [].
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+
 class VerifyMechanicView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUser]
@@ -433,7 +402,6 @@ class VerifyMechanicView(APIView):
             if not mechanic_id:
                 return Response({"error": "Mechanic ID is required."}, status=status.HTTP_400_BAD_REQUEST)
             
-             # 1. Fetch the mechanic by ID.
             mechanic = Mechanic.objects.get(id=mechanic_id)
             mechanic.is_verified = True
             mechanic.save(update_fields=['is_verified'])
@@ -455,7 +423,6 @@ class VerifyMechanicView(APIView):
             return Response({"error": "Something went wrong."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-# Mechenic is not verified for this job
 class RejectMechanicView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUser]
@@ -468,7 +435,6 @@ class RejectMechanicView(APIView):
             
             mechanic = Mechanic.objects.get(id=mechanic_id)
 
-            # --- ADD THIS PART ---
             try:
                 send_kyc_rejected_email.delay({
                     "email": mechanic.user.email,
@@ -477,7 +443,6 @@ class RejectMechanicView(APIView):
                 })
             except Exception as e:
                 logger.warning(f"Failed to enqueue KYC rejection email for {mechanic.user.email}: {e}")
-            # --- END OF ADDED PART ---
 
             mechanic.delete() 
             cache.delete(generate_user_cache_key(request))
