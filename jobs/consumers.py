@@ -178,31 +178,36 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
     async def handle_location_update(self, data):
         """
         Handles location updates. Always updates the DB.
-        Only sends to the customer if the mechanic is 'working'.
+        Only sends to the customer if the mechanic is 'working' AND a job_id is provided.
         """
         latitude = data.get('latitude')
         longitude = data.get('longitude')
-        job_id = data.get('job_id')
+        job_id = data.get('job_id') # Will be None if not sent by client
 
-        if not all([latitude, longitude, job_id]):
-            logger.warning(f"[LOCATION] Incomplete data from user {self.user_id}.")
+        # This check handles the case where job_id is missing.
+        if not all([latitude, longitude]):
+            logger.warning(f"Incomplete location data from user {self.user_id}.")
             return
 
-        # 1. ALWAYS update the mechanic's location in the database.
-        # This is critical for keeping their last-known position accurate.
+        # 1. Always update the mechanic's location in the database.
         await self.update_mechanic_location(self.user_id, latitude, longitude)
 
-        # 2. Check the mechanic's status.
+        # 2. Only proceed to send a notification if there is a job_id.
+        if not job_id:
+            logger.info(f"Mechanic {self.user_id} has no active job. DB location updated.")
+            return # Exit early
+
+        # 3. Check the mechanic's status.
         mechanic_is_working = await self.is_mechanic_working(self.user_id)
 
-        # 3. If they are working, ALSO send the location to the customer.
+        # 4. If they are working, send the notification.
         if mechanic_is_working:
             customer_id = await self.get_customer_id_for_job(job_id, self.user)
             
             if customer_id:
                 target_room = f'user_{customer_id}'
-                logger.info(f"[LOCATION] Forwarding location from 'working' mechanic {self.user_id} to room '{target_room}'.")
                 
+                # This line will NOT cause an error if the customer is offline.
                 await self.channel_layer.group_send(
                     target_room,
                     {
@@ -212,10 +217,6 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
                         'mechanic_id': self.user_id,
                     }
                 )
-        else:
-            logger.info(f"Mechanic {self.user_id} is not working. Location was updated in DB but not sent to a customer.")
-
-
        
     # --- Asynchronous Database Operations ---
     @database_sync_to_async
