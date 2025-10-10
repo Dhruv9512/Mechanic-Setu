@@ -161,7 +161,7 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'mechanic_accepted',
             'mechanic_details': event.get('mechanic_details'),
-            'job_id': event.get('job_id') # Pass the job_id to the client
+            'job_id': event.get('job_id')
         }))
 
     async def mechanic_location(self, event):
@@ -176,13 +176,77 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         }))
 
     async def handle_location_update(self, data):
+        """
+        Handles location updates. Always updates the DB.
+        Only sends to the customer if the mechanic is 'working'.
+        """
         latitude = data.get('latitude')
         longitude = data.get('longitude')
+        job_id = data.get('job_id')
 
-        if latitude and longitude:
-            await self.update_mechanic_location(self.user_id, latitude, longitude)
+        if not all([latitude, longitude, job_id]):
+            logger.warning(f"[LOCATION] Incomplete data from user {self.user_id}.")
+            return
 
+        # 1. ALWAYS update the mechanic's location in the database.
+        # This is critical for keeping their last-known position accurate.
+        await self.update_mechanic_location(self.user_id, latitude, longitude)
+
+        # 2. Check the mechanic's status.
+        mechanic_is_working = await self.is_mechanic_working(self.user_id)
+
+        # 3. If they are working, ALSO send the location to the customer.
+        if mechanic_is_working:
+            customer_id = await self.get_customer_id_for_job(job_id, self.user)
+            
+            if customer_id:
+                target_room = f'user_{customer_id}'
+                logger.info(f"[LOCATION] Forwarding location from 'working' mechanic {self.user_id} to room '{target_room}'.")
+                
+                await self.channel_layer.group_send(
+                    target_room,
+                    {
+                        'type': 'mechanic_location',
+                        'latitude': latitude,
+                        'longitude': longitude,
+                        'mechanic_id': self.user_id,
+                    }
+                )
+        else:
+            logger.info(f"Mechanic {self.user_id} is not working. Location was updated in DB but not sent to a customer.")
+
+
+       
     # --- Asynchronous Database Operations ---
+    @database_sync_to_async
+    def get_customer_id_for_job(self, job_id, mechanic_user):
+        """
+        Securely retrieves the customer's user ID for a given job.
+        """
+        try:
+            job = ServiceRequest.objects.select_related('user', 'mechanic__user').get(
+                id=job_id, 
+                mechanic__user=mechanic_user
+            )
+            return job.user.id
+        except ServiceRequest.DoesNotExist:
+            return None
+        
+
+    @database_sync_to_async
+    def is_mechanic_working(self, user_id):
+        """
+        Checks the database to see if the mechanic is marked as 'working'.
+        Returns True if the mechanic exists and is working, otherwise False.
+        """
+        try:
+            mechanic = Mechanic.objects.get(user_id=user_id)
+            if mechanic.status==mechanic.StatusChoices.WORKING:
+                return True
+            else:
+                return False
+        except Mechanic.DoesNotExist:
+            return False
 
     @sync_to_async
     def update_mechanic_location(self, user_id, latitude, longitude):
@@ -204,173 +268,3 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             logger.error(f"Error updating location for user {user_id}: {e}", exc_info=True)
 
 
-
-# You can place this in a new file, or within your existing jobs/consumers.py
-
-import json
-from urllib.parse import parse_qs
-from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
-from rest_framework_simplejwt.tokens import AccessToken
-from users.models import CustomUser
-import logging
-
-logger = logging.getLogger(__name__)
-
-
-class JobRoomConsumer(AsyncWebsocketConsumer):
-    """
-    Manages WebSocket connections for a private room between a user and a mechanic
-    for a specific service request.
-    """
-
-    # --- Connection Management ---
-    
-    # In your jobs/consumers.py file, inside the JobRoomConsumer class
-
-    async def connect(self):
-        """
-        Handles an incoming WebSocket connection, authenticates the user,
-        and immediately joins them to the private job room specified in the URL.
-        """
-        logger.info("[JOB-ROOM] Attempting to connect...")
-        
-        # --- Step 1: Get token and service_id from query string ---
-        query_string = self.scope.get("query_string", b"").decode()
-        query_params = parse_qs(query_string)
-        token_key = query_params.get("token", [None])[0]
-        service_id = query_params.get("service_id", [None])[0] # <-- ADD THIS LINE
-
-        # --- Step 2: Validate token and authenticate user ---
-        if not token_key:
-            logger.warning("[JOB-ROOM] Connection rejected: No token provided.")
-            await self.close()
-            return
-
-        self.user = await self.get_user_from_token(token_key)
-        if not self.user:
-            logger.warning("[JOB-ROOM] Connection rejected: Invalid token.")
-            await self.close()
-            return
-
-        self.user_id = self.user.id
-
-        # --- Step 3: Validate service_id and join the room ---
-        if not service_id:
-            logger.warning(f"[JOB-ROOM] Connection rejected for user {self.user_id}: No service_id provided.")
-            await self.close()
-            return
-        
-        self.job_room_name = f"job_{service_id}"
-
-        # Add user to the job-specific group
-        await self.channel_layer.group_add(
-            self.job_room_name,
-            self.channel_name
-        )
-
-        await self.accept()
-        logger.info(f"[JOB-ROOM] User {self.user_id} connected and joined room '{self.job_room_name}'.")
-
-        async def disconnect(self, close_code):
-            """
-            Handles disconnection and ensures the user is removed from the job room.
-            """
-            if self.job_room_name:
-                await self.channel_layer.group_discard(
-                    self.job_room_name,
-                    self.channel_name
-                )
-            logger.info(f"[JOB-ROOM] Disconnected user {self.user_id}. Code: {close_code}")
-
-    # --- Incoming Message Router ---
-
-    async def receive(self, text_data):
-        """
-        Routes incoming messages based on their 'type'.
-        """
-        try:
-            data = json.loads(text_data)
-            message_type = data.get('type')
-
-            if message_type == 'join_job_room':
-                await self.join_job_room(data)
-            
-            elif message_type == 'send_chat_message':
-                await self.handle_chat_message(data)
-            
-            # Add other handlers like 'location_update' here
-            
-            else:
-                logger.warning(f"[JOB-ROOM] Unknown message type: {message_type}")
-
-        except Exception as e:
-            logger.error(f"[JOB-ROOM] Error processing message: {e}", exc_info=True)
-
-    # --- Handlers for Client-Side Events ---
-
-    async def join_job_room(self, event):
-        """
-        Adds the user/mechanic to a private room for a specific job.
-        """
-        job_id = event.get('job_id')
-        if job_id:
-            self.job_room_name = f"job_{job_id}"
-            await self.channel_layer.group_add(
-                self.job_room_name,
-                self.channel_name
-            )
-            logger.info(f"User {self.user_id} joined room '{self.job_room_name}'")
-            # Send a confirmation back to the client
-            await self.send(text_data=json.dumps({
-                'type': 'room_joined_confirmation',
-                'job_id': job_id,
-                'message': f"Successfully joined room for job {job_id}."
-            }))
-
-    async def handle_chat_message(self, event):
-        """
-        Receives a chat message from a client and broadcasts it to the room.
-        """
-        message = event.get('message')
-        job_id = event.get('job_id')
-
-        if not message or not job_id or not self.job_room_name:
-            return
-
-        # Broadcast the message to the job room group
-        await self.channel_layer.group_send(
-            self.job_room_name,
-            {
-                'type': 'chat_message', # Corresponds to the method below
-                'message': message,
-                'sender_id': self.user_id
-            }
-        )
-
-    # --- Handlers for Server-Side Group Events ---
-
-    async def chat_message(self, event):
-        """
-        Receives a message from the room group and sends it to the client.
-        """
-        await self.send(text_data=json.dumps({
-            'type': 'new_chat_message',
-            'message': event.get('message'),
-            'sender_id': event.get('sender_id')
-        }))
-
-    # --- Authentication Helper ---
-
-    @database_sync_to_async
-    def get_user_from_token(self, token_key):
-        """
-        Validates the JWT and retrieves the user from the database.
-        """
-        try:
-            validated_token = AccessToken(token_key)
-            user_id = validated_token["user_id"]
-            return CustomUser.objects.only('id').get(id=user_id)
-        except Exception as e:
-            logger.error(f"[TOKEN ERROR] Invalid token: {e}")
-            return None
