@@ -162,6 +162,12 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             'mechanic_id': event.get('mechanic_id'),
         }))
 
+    async def handle_location_update(self, data):
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+
+        if latitude and longitude:
+            await self.update_mechanic_location(self.user_id, latitude, longitude)
 
     # --- Asynchronous Database Operations ---
 
