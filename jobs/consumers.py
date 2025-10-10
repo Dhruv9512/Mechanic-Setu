@@ -121,31 +121,6 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             logger.error(f"[WS-RECEIVE] Error processing received message: {e}", exc_info=True)
 
 
-    
-    async def handle_location_update(self, data):
-        """
-        Handles a mechanic's location update and broadcasts it to the job room.
-        """
-        latitude = data.get('latitude')
-        longitude = data.get('longitude')
-        job_id = data.get('job_id') # Client MUST now send the job_id
-
-        if latitude and longitude and job_id:
-            # Update location in DB (good practice)
-            await self.update_mechanic_location(self.user_id, latitude, longitude)
-            
-            # Broadcast the location to the private job room
-            job_room = f"job_{job_id}"
-            await self.channel_layer.group_send(
-                job_room,
-                {
-                    'type': 'mechanic_location', # New handler type for the group
-                    'latitude': latitude,
-                    'longitude': longitude,
-                    'mechanic_id': self.user_id,
-                }
-            )
-
     # --- Handlers for Server-Side Group Events ---
 
     async def new_job(self, event):
@@ -193,17 +168,19 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
     @sync_to_async
     def update_mechanic_location(self, user_id, latitude, longitude):
         """
-        Updates a mechanic's general location in the database.
+        Updates a mechanic's current location in the database.
+        Using .get() and .save() to ensure signals are triggered.
         """
         try:
-            rows_updated = Mechanic.objects.filter(user_id=user_id).update(
-                current_latitude=latitude,
-                current_longitude=longitude
-            )
-            if rows_updated > 0:
-                logger.info(f"Updated location for user {user_id} to ({latitude}, {longitude})")
-            else:
-                logger.warning(f"Attempted to update location for non-existent mechanic user {user_id}")
+            mechanic = Mechanic.objects.get(user_id=user_id)
+            mechanic.current_latitude = latitude
+            mechanic.current_longitude = longitude
+            mechanic.save(update_fields=['current_latitude', 'current_longitude'])
+            
+            logger.info(f"Updated location for user {user_id} to ({latitude}, {longitude})")
+
+        except Mechanic.DoesNotExist:
+            logger.warning(f"Attempted to update location for non-existent mechanic user {user_id}")
         except Exception as e:
             logger.error(f"Error updating location for user {user_id}: {e}", exc_info=True)
 
