@@ -139,6 +139,19 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         }
         
         await self.send(text_data=json.dumps(payload))
+    async def job_expired_notification(self, event):
+        """
+        Handles the 'job_expired_notification' event from the channel layer.
+        Informs the mechanic that a job they were notified about has timed out.
+        """
+        job_id = event.get('job_id')
+        logger.info(f"[HANDLER] 'job_expired_notification' triggered for user {self.user_id} regarding job {job_id}.")
+        
+        await self.send(text_data=json.dumps({
+            'type': 'job_expired', # The type your frontend will look for
+            'job_id': job_id,
+            'message': f"The job request {job_id} has expired."
+        }))
 
     async def mechanic_accepted(self, event):
         """

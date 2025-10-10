@@ -149,7 +149,7 @@ class AcceptServiceRequestView(APIView):
                         'id': mechanic_profile.user.id,
                         'first_name': mechanic_profile.user.first_name,
                         'last_name': mechanic_profile.user.last_name,
-                        'phone_number': str(mechanic_profile.user.phone_number), # Ensure phone is a string
+                        'phone_number': str(mechanic_profile.user.mobile_number), # Ensure phone is a string
                         'current_latitude': mechanic_profile.current_latitude,
                         'current_longitude': mechanic_profile.current_longitude,
                     }
