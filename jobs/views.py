@@ -152,6 +152,7 @@ class AcceptServiceRequestView(APIView):
                         'phone_number': str(mechanic_profile.user.mobile_number), # Ensure phone is a string
                         'current_latitude': mechanic_profile.current_latitude,
                         'current_longitude': mechanic_profile.current_longitude,
+                        'Mechanic_profile_pic':mechanic_profile.user.profile_pic,
                     }
 
                     channel_layer = get_channel_layer()
