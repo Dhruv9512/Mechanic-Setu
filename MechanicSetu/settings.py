@@ -15,6 +15,7 @@ import os
 import dj_database_url
 from datetime import timedelta
 from decouple import config
+from celery.schedules import crontab
 from dotenv import load_dotenv
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -40,6 +41,7 @@ INSTALLED_APPS = [
     'jet',
     "users",
     "jobs",
+    "Profile",
     "core",
     'channels',
     'corsheaders',
@@ -95,6 +97,17 @@ CELERY_BROKER_USE_SSL = {
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
+# CELERY BEAT SCHEDULE
+CELERY_BEAT_SCHEDULE = {
+    'cleanup-stale-jobs-every-hour': {
+        'task': 'cleanup_stale_jobs',
+        'schedule': crontab(minute=0, hour='*/1'),
+    },
+    'cancel-inactive-jobs-every-5-minutes': {
+        'task': 'cancel_inactive_jobs', # This is our trigger task
+        'schedule': crontab(minute='*/5'),  # Runs every 5 minutes
+    },
+}
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),      

@@ -15,6 +15,7 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .tasks import find_and_notify_mechanics_thread_task
 
+from .serializers import MechanicDataForUserSerializer,JobDetailsForMechanicSerializer
 import logging
 logger = logging.getLogger(__name__)
 
@@ -145,15 +146,8 @@ class AcceptServiceRequestView(APIView):
                     sr_locked.assigned_mechanic = mechanic_profile
                     sr_locked.save()
 
-                    mechanic_data = {
-                        'id': mechanic_profile.user.id,
-                        'first_name': mechanic_profile.user.first_name,
-                        'last_name': mechanic_profile.user.last_name,
-                        'phone_number': str(mechanic_profile.user.mobile_number), # Ensure phone is a string
-                        'current_latitude': mechanic_profile.current_latitude,
-                        'current_longitude': mechanic_profile.current_longitude,
-                        'Mechanic_profile_pic':mechanic_profile.user.profile_pic,
-                    }
+                    serializer = MechanicDataForUserSerializer(mechanic_profile)
+                    mechanic_data = serializer.data
 
                     channel_layer = get_channel_layer()
                     async_to_sync(channel_layer.group_send)(
@@ -288,3 +282,59 @@ class CompleteServiceRequestView(APIView):
                 return Response({'message': 'Job has been marked as completed.'}, status=status.HTTP_200_OK)
         except ServiceRequest.DoesNotExist:
             return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+
+class SyncActiveJobView(APIView):
+    """
+    Checks for and returns the currently active job for a user upon reconnection.
+    This allows the frontend to sync its state.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        active_request = None
+        is_mechanic_user = False
+
+        try:
+            mechanic_profile = user.mechanic_profile
+            active_request = ServiceRequest.objects.filter(
+                assigned_mechanic=mechanic_profile,
+                status='ACCEPTED'
+            ).select_related('user', 'assigned_mechanic__user').first()
+            is_mechanic_user = True
+        except Mechanic.DoesNotExist:
+            active_request = ServiceRequest.objects.filter(
+                user=user,
+                status__in=['PENDING', 'ACCEPTED']
+            ).select_related('user', 'assigned_mechanic__user').first()
+
+        if active_request:
+            # --- MODIFICATION: Manually build the response based on user role ---
+            if is_mechanic_user:
+                # This is a mechanic, send them the job and customer details
+                serializer=JobDetailsForMechanicSerializer(active_request)
+                job_details =serializer.data
+                return Response(job_details, status=status.HTTP_200_OK)
+            else:
+                # This is a customer, send them the mechanic's details
+                if active_request.assigned_mechanic:
+                    mechanic_profile = active_request.assigned_mechanic
+                    serializer = MechanicDataForUserSerializer(mechanic_profile)
+                    mechanic_data = serializer.data
+                    return Response(mechanic_data, status=status.HTTP_200_OK)
+                else:
+                    # The job is pending and has no mechanic assigned yet
+                    pending_data = {
+                        'job_id': active_request.id,
+                        'status': 'PENDING',
+                        'message': 'Waiting for a mechanic to accept your request.'
+                    }
+                    return Response(pending_data, status=status.HTTP_200_OK)
+                    
+                
+        else:
+            return Response({'message': 'No active job found.'}, status=status.HTTP_200_OK)

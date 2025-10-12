@@ -235,7 +235,7 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         # 4. If they are working, send the notification.
         if mechanic_is_working:
             customer_id = await self.get_customer_id_for_job(job_id, self.user)
-            
+            await self.update_service_request_timestamp(job_id)
             if customer_id:
                 target_room = f'user_{customer_id}'
                 
@@ -249,6 +249,13 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
                         'mechanic_id': self.user_id,
                     }
                 )
+    async def handle_user_heartbeat(self, data):
+        """
+        Handles heartbeat messages from the user to keep a job active.
+        """
+        job_id = data.get('job_id')
+        if job_id:
+            await self.update_service_request_timestamp(job_id)
        
     # --- Asynchronous Database Operations ---
     @database_sync_to_async
@@ -280,6 +287,19 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
                 return False
         except Mechanic.DoesNotExist:
             return False
+    
+    @database_sync_to_async
+    def update_service_request_timestamp(self, job_id):
+        """
+        Updates the 'updated_at' field for a given service request.
+        """
+        try:
+            service_request = ServiceRequest.objects.get(id=job_id)
+            service_request.save() # This will automatically update the updated_at field
+            logger.info(f"Updated timestamp for service request {job_id}")
+        except ServiceRequest.DoesNotExist:
+            logger.warning(f"Could not update timestamp for non-existent service request {job_id}")
+
 
     @sync_to_async
     def update_mechanic_location(self, user_id, latitude, longitude):

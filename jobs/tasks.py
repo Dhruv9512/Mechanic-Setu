@@ -9,6 +9,14 @@ from django.db.models.functions import Radians, Sin, Cos, Sqrt, Power
 from .models import ServiceRequest
 from users.models import Mechanic
 
+import threading
+from datetime import timedelta
+from django.utils import timezone
+from celery import shared_task
+
+from .serializers import JobDetailsForMechanicSerializer
+import logging
+
 # Set up a specific logger for this module
 logger = logging.getLogger(__name__)
 
@@ -48,6 +56,19 @@ def get_mechanic_details(user_id):
         logger.error(f"Error fetching details for mechanic {user_id}: {e}", exc_info=True)
         return None, None
 
+@database_sync_to_async
+def get_serialized_job_details(request_id):
+    """
+    Fetches a ServiceRequest and serializes it using the specific
+    serializer for mechanics.
+    """
+    try:
+        service_request = ServiceRequest.objects.get(id=request_id)
+        serializer = JobDetailsForMechanicSerializer(service_request)
+        return serializer.data
+    except ServiceRequest.DoesNotExist:
+        return None
+
 async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
     channel_layer = get_channel_layer()
     batch_size = 5
@@ -57,20 +78,7 @@ async def _broadcast_to_mechanics(service_request, mechanic_user_ids):
 
     logger.info(f"Starting broadcast for job {request_id} to {len(mechanic_user_ids)} mechanics in batches of {batch_size}.")
 
-    job_details = {
-        'id': request_id,
-        'latitude': service_request.latitude,
-        'longitude': service_request.longitude,
-        'location': service_request.location,
-        'vehical_type': service_request.vehical_type,
-        'problem': service_request.problem,
-        'additional_details': service_request.additional_details,
-        # These are now safe to access because of select_related('user')
-        'first_name': service_request.user.first_name,
-        'last_name': service_request.user.last_name,
-        'user_profile_pic': service_request.user.profile_pic,
-        'mobile_number': str(service_request.user.mobile_number),
-    }
+    job_details = await get_serialized_job_details(request_id)
 
     for i in range(0, len(mechanic_user_ids), batch_size):
         batch_ids = mechanic_user_ids[i:i + batch_size]
@@ -181,3 +189,80 @@ def find_and_notify_mechanics_thread_task(service_request_id):
         logger.critical(f"[Thread Task] An unexpected critical error occurred: {e}", exc_info=True)
     finally:
         logger.info(f"[Thread Task] Task for service_request_id: {service_request_id} finished.")
+
+
+
+
+logger = logging.getLogger(__name__)
+
+# ... (other tasks like find_and_notify_mechanics_thread_task remain the same) ...
+
+def cancel_inactive_jobs_thread_task():
+    """
+    This function contains the core logic and is designed to run in a separate thread.
+    It finds and cancels jobs that have been inactive for too long.
+    """
+    logger.info("[INACTIVITY_CHECK] Running job inactivity cleanup in a new thread...")
+    inactivity_threshold = timezone.now() - timedelta(minutes=15)
+
+    inactive_requests = ServiceRequest.objects.filter(
+        status='ACCEPTED',
+        updated_at__lt=inactivity_threshold
+    ).select_related('user', 'assigned_mechanic__user')
+
+    if not inactive_requests.exists():
+        logger.info("[INACTIVITY_CHECK] No inactive jobs found.")
+        return
+
+    logger.info(f"[INACTIVITY_CHECK] Found {inactive_requests.count()} inactive jobs to cancel.")
+
+    for request in inactive_requests:
+        mechanic_profile = request.assigned_mechanic
+        
+        # Update the service request status
+        request.status = 'CANCELLED'
+        request.cancellation_reason = 'Job automatically cancelled due to inactivity from both parties.'
+        request.save()
+
+        # Update the mechanic's status
+        if mechanic_profile:
+            mechanic_profile.status = 'ONLINE'
+            mechanic_profile.save()
+
+        # Broadcast the cancellation to both the user and the mechanic
+        channel_layer = get_channel_layer()
+        message = f"Job {request.id} was automatically cancelled due to inactivity."
+
+        # Notify the user
+        async_to_sync(channel_layer.group_send)(
+            f"user_{request.user.id}",
+            {
+                'type': 'job_cancelled_notification',
+                'job_id': request.id,
+                'message': message
+            }
+        )
+
+        # Notify the mechanic
+        if mechanic_profile and mechanic_profile.user:
+            async_to_sync(channel_layer.group_send)(
+                f"user_{mechanic_profile.user.id}",
+                {
+                    'type': 'job_cancelled_notification',
+                    'job_id': request.id,
+                    'message': message
+                }
+            )
+        logger.info(f"[INACTIVITY_CHECK] Cancelled job {request.id} and notified both parties.")
+
+
+@shared_task(name="cancel_inactive_jobs")
+def cancel_inactive_jobs():
+    """
+    Celery task that spawns a new thread to handle the cleanup of inactive jobs.
+    This is the function that Celery Beat will schedule.
+    """
+    logger.info("[CELERY_TASK] Spawning a thread for cancel_inactive_jobs_thread_task.")
+    thread = threading.Thread(target=cancel_inactive_jobs_thread_task)
+    thread.daemon = True
+    thread.start()

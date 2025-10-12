@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UpdateMechanicStatusView,GetBasicNeedsView,CreateServiceRequestView,AcceptServiceRequestView,CancelServiceRequestView,CompleteServiceRequestView
+from .views import UpdateMechanicStatusView,GetBasicNeedsView,CreateServiceRequestView,AcceptServiceRequestView,CancelServiceRequestView,CompleteServiceRequestView,SyncActiveJobView
 
 urlpatterns = [
    path('UpdateMechanicStatus/', UpdateMechanicStatusView.as_view(), name='UpdateMechanicStatus'),
@@ -8,4 +8,5 @@ urlpatterns = [
    path('AcceptServiceRequest/<int:request_id>/', AcceptServiceRequestView.as_view(), name='AcceptServiceRequest'),
    path('CancelServiceRequest/<int:request_id>/', CancelServiceRequestView.as_view(), name='CancelServiceRequest'),
    path('CompleteServiceRequest/<int:request_id>/', CompleteServiceRequestView.as_view(), name='CompleteServiceRequest'),
+   path('SyncActiveJob/', SyncActiveJobView.as_view(), name='SyncActiveJob'),
 ]
