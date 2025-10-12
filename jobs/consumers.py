@@ -175,6 +175,21 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             'mechanic_id': event.get('mechanic_id'),
         }))
 
+    async def job_cancelled_notification(self, event):
+        """
+        Handles the 'job_cancelled_notification' event.
+        Informs the user/mechanic that a job has been cancelled.
+        """
+        job_id = event.get('job_id')
+        message = event.get('message')
+        logger.info(f"[HANDLER] 'job_cancelled_notification' triggered for user {self.user_id} regarding job {job_id}.")
+
+        await self.send(text_data=json.dumps({
+            'type': 'job_cancelled', # The type frontend will look for
+            'job_id': job_id,
+            'message': message
+        }))
+
     async def handle_location_update(self, data):
         """
         Handles location updates. Always updates the DB.

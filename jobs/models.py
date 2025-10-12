@@ -31,6 +31,7 @@ class ServiceRequest(models.Model):
     problem=models.TextField(blank=True, null=True) 
     additional_details=models.TextField(blank=True, null=True)
     price=models.FloatField(blank=True, null=True)
+    cancellation_reason = models.TextField(blank=True, null=True) # New field
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

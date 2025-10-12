@@ -169,3 +169,72 @@ class AcceptServiceRequestView(APIView):
                     return Response({'error': 'This request is no longer available.'}, status=status.HTTP_409_CONFLICT)
         except ServiceRequest.DoesNotExist:
             return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+
+
+
+class CancelServiceRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, request_id):
+        try:
+            with transaction.atomic():
+                service_request = ServiceRequest.objects.select_related('user', 'assigned_mechanic__user').get(id=request_id)
+                cancellation_reason = request.data.get('cancellation_reason', '')
+
+                is_customer = service_request.user == request.user
+                is_mechanic = service_request.assigned_mechanic and service_request.assigned_mechanic.user == request.user
+
+                if not is_customer and not is_mechanic:
+                    return Response({'error': 'You are not authorized to cancel this request.'}, status=status.HTTP_403_FORBIDDEN)
+
+                if service_request.status not in ['PENDING', 'ACCEPTED']:
+                    return Response({'error': 'This request cannot be cancelled at its current stage.'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                original_customer_id = service_request.user.id
+                original_mechanic_id = service_request.assigned_mechanic.user.id if service_request.assigned_mechanic else None
+
+                service_request.status = 'CANCELLED'
+                service_request.cancellation_reason = cancellation_reason
+                service_request.save()
+
+                channel_layer = get_channel_layer()
+
+                if is_mechanic:
+                    mechanic_profile = service_request.assigned_mechanic
+                    mechanic_profile.status = 'ONLINE'
+                    mechanic_profile.save()
+                    
+                    target_room = f'user_{original_customer_id}'
+                    message = f"The mechanic has cancelled job request {service_request.id}."
+                    if cancellation_reason:
+                        message += f" Reason: {cancellation_reason}"
+                    
+                    async_to_sync(channel_layer.group_send)(
+                        target_room,
+                        {
+                            'type': 'job_cancelled_notification',
+                            'job_id': service_request.id,
+                            'message': message
+                        }
+                    )
+
+                elif is_customer and original_mechanic_id:
+                    target_room = f'user_{original_mechanic_id}'
+                    message = f"The customer has cancelled job request {service_request.id}."
+                    if cancellation_reason:
+                        message += f" Reason: {cancellation_reason}"
+
+                    async_to_sync(channel_layer.group_send)(
+                        target_room,
+                        {
+                            'type': 'job_cancelled_notification',
+                            'job_id': service_request.id,
+                            'message': message
+                        }
+                    )
+
+                return Response({'message': 'The service request has been successfully cancelled.'}, status=status.HTTP_200_OK)
+        except ServiceRequest.DoesNotExist:
+            return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
