@@ -190,6 +190,23 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             'message': message
         }))
 
+
+    async def job_completed_notification(self, event):
+        """
+        Handles the 'job_completed_notification' event.
+        Informs the user that their job has been completed.
+        """
+        job_id = event.get('job_id')
+        message = event.get('message')
+        logger.info(f"[HANDLER] 'job_completed_notification' triggered for user {self.user_id} regarding job {job_id}.")
+
+        await self.send(text_data=json.dumps({
+            'type': 'job_completed', # The type frontend will look for
+            'job_id': job_id,
+            'message': message
+        }))
+
+
     async def handle_location_update(self, data):
         """
         Handles location updates. Always updates the DB.

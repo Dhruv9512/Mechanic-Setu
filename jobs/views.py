@@ -238,3 +238,53 @@ class CancelServiceRequestView(APIView):
                 return Response({'message': 'The service request has been successfully cancelled.'}, status=status.HTTP_200_OK)
         except ServiceRequest.DoesNotExist:
             return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+class CompleteServiceRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, request_id):
+        try:
+            with transaction.atomic():
+                service_request = ServiceRequest.objects.select_related('user', 'assigned_mechanic__user').get(id=request_id)
+
+                # Authorization check: Only the assigned mechanic can complete the job.
+                if not (service_request.assigned_mechanic and service_request.assigned_mechanic.user == request.user):
+                    return Response({'error': 'You are not authorized to complete this request.'}, status=status.HTTP_403_FORBIDDEN)
+
+                # Status validation: The job must be in 'ACCEPTED' state to be completed.
+                if service_request.status != 'ACCEPTED':
+                    return Response({'error': 'This request cannot be completed at its current stage.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                 # Get the price from the request data
+                try:
+                    price = float(request.data.get('price'))
+                except (TypeError, ValueError):
+                    return Response({"error": "Invalid price provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+                # Update service request
+                service_request.status = 'COMPLETED'
+                service_request.price = price
+                service_request.save()
+
+                # Update mechanic's status to ONLINE
+                mechanic_profile = service_request.assigned_mechanic
+                mechanic_profile.status = 'ONLINE'
+                mechanic_profile.save()
+
+                # Broadcast notification to the customer
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{service_request.user.id}",
+                    {
+                        'type': 'job_completed_notification',
+                        'job_id': service_request.id,
+                        'message': f"Your service request {service_request.id} has been completed by the mechanic."
+                    }
+                )
+
+                return Response({'message': 'Job has been marked as completed.'}, status=status.HTTP_200_OK)
+        except ServiceRequest.DoesNotExist:
+            return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
