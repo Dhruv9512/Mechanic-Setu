@@ -6,5 +6,5 @@ urlpatterns = [
    path('GetBasicNeeds/', GetBasicNeedsView.as_view(), name='GetBasicNeeds'),
    path('CreateServiceRequest/', CreateServiceRequestView.as_view(), name='CreateServiceRequest'),
    path('AcceptServiceRequest/<int:request_id>/', AcceptServiceRequestView.as_view(), name='AcceptServiceRequest'),
-     path('CancelServiceRequest/<int:request_id>/', CancelServiceRequestView.as_view(), name='CancelServiceRequest'),
+   path('CancelServiceRequest/<int:request_id>/', CancelServiceRequestView.as_view(), name='CancelServiceRequest'),
 ]
