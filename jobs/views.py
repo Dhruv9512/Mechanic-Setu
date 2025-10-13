@@ -183,7 +183,7 @@ class CancelServiceRequestView(APIView):
                 if not is_customer and not is_mechanic:
                     return Response({'error': 'You are not authorized to cancel this request.'}, status=status.HTTP_403_FORBIDDEN)
 
-                if service_request.status not in ['PENDING', 'ACCEPTED']:
+                if service_request.status not in ['PENDING', 'EXPIRED']:
                     return Response({'error': 'This request cannot be cancelled at its current stage.'}, status=status.HTTP_400_BAD_REQUEST)
                 
                 original_customer_id = service_request.user.id
