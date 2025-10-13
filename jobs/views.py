@@ -191,7 +191,7 @@ class CancelServiceRequestView(APIView):
                     )
                     return Response({'error': 'You are not authorized to cancel this request.'}, status=status.HTTP_403_FORBIDDEN)
 
-                if service_request.status not in ['PENDING', 'EXPIRED']:
+                if service_request.status not in ['PENDING', 'ACCEPTED']:
                     # Log failure due to invalid request status
                     logger.warning(
                         f"Cancellation failed for ServiceRequest ID: {request_id} due to invalid status '{service_request.status}'. "

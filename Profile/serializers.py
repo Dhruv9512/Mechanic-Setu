@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import CustomUser
+from users.models import CustomUser
+from jobs.models import ServiceRequest
 
 class SetUsersDetailsSerializer(serializers.ModelSerializer):
     """
@@ -12,3 +13,16 @@ class SetUsersDetailsSerializer(serializers.ModelSerializer):
         # Only allow updating of certain fields to maintain data integrity and security.
         fields = ['first_name', 'last_name', 'mobile_number', 'profile_pic']
         read_only_fields = ['id', 'email']
+
+
+class ServiceRequestHistorySerializer(serializers.ModelSerializer):
+    """
+    Serializer for the ServiceRequest model for user's history.
+    """
+    class Meta:
+        model = ServiceRequest
+        fields = [
+            'id', 'status', 'latitude', 'longitude', 'location',
+            'vehical_type', 'problem', 'additional_details', 'price',
+            'cancellation_reason', 'created_at', 'updated_at'
+        ]
