@@ -104,13 +104,12 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             logger.info(f"[WS-RECEIVE] Parsed message type: '{message_type}'")
 
             # --- ROUTER LOGIC UPDATED ---
-            if message_type == 'join_job_room':
-                await self.join_job_room(data)
-            
-            elif message_type == 'location_update':
+            if message_type == 'location_update':
                 await self.handle_location_update(data)
 
-            # (You can add more handlers here like 'send_chat_message', etc.)
+            # --- ADD THIS CONDITION ---
+            elif message_type == 'user_heartbeat':
+                await self.handle_user_heartbeat(data)
             
             else:
                 logger.warning(f"[WS-RECEIVE] Unknown message type '{message_type}' from user {self.user_id}.")
@@ -119,7 +118,6 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             logger.error(f"[WS-RECEIVE] Failed to parse JSON from message: {text_data}")
         except Exception as e:
             logger.error(f"[WS-RECEIVE] Error processing received message: {e}", exc_info=True)
-
 
     # --- Handlers for Server-Side Group Events ---
 
@@ -139,6 +137,8 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         }
         
         await self.send(text_data=json.dumps(payload))
+
+
     async def job_expired_notification(self, event):
         """
         Handles the 'job_expired_notification' event from the channel layer.
@@ -152,6 +152,22 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             'job_id': job_id,
             'message': f"The job request {job_id} has expired."
         }))
+
+    # --- ADDED THIS NEW HANDLER ---
+    async def job_taken_notification(self, event):
+        """
+        Handles the 'job_taken_notification' event. This tells other mechanics
+        that a job they were offered has been accepted by someone else.
+        """
+        job_id = event.get('job_id')
+        logger.info(f"[HANDLER] 'job_taken_notification' triggered for user {self.user_id} regarding job {job_id}.")
+        
+        await self.send(text_data=json.dumps({
+            'type': 'job_taken',  # The type your frontend will look for
+            'job_id': job_id,
+            'message': f"The job request {job_id} has been taken by another mechanic."
+        }))
+
 
     async def mechanic_accepted(self, event):
         """

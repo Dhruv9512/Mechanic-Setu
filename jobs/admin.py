@@ -6,7 +6,7 @@ class ServiceRequestAdmin(admin.ModelAdmin):
     """
     Customizes the admin interface for the ServiceRequest model.
     """
-    # Fields to display in the main list view
+    # --- MODIFIED: All fields are now included in the list display ---
     list_display = (
         'id', 
         'user', 
@@ -14,7 +14,10 @@ class ServiceRequestAdmin(admin.ModelAdmin):
         'status', 
         'vehical_type', 
         'location', 
-        'created_at'
+        'price',
+        'created_at',
+        'updated_at',
+        'cancellation_reason'
     )
     
     # Filters available on the right sidebar
@@ -32,10 +35,10 @@ class ServiceRequestAdmin(admin.ModelAdmin):
     # Fields that cannot be edited directly in the admin panel
     readonly_fields = ('id', 'created_at', 'updated_at')
 
-    # Organize the detail view into logical sections
+    # --- MODIFIED: All fields are now organized into fieldsets ---
     fieldsets = (
         ('Core Information', {
-            'fields': ('id', 'status')
+            'fields': ('id', 'status', 'price')
         }),
         ('User and Mechanic', {
             'fields': ('user', 'assigned_mechanic')
@@ -45,6 +48,9 @@ class ServiceRequestAdmin(admin.ModelAdmin):
         }),
         ('Location Information', {
             'fields': ('location', 'latitude', 'longitude')
+        }),
+        ('Cancellation Information', {
+            'fields': ('cancellation_reason',)
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')
