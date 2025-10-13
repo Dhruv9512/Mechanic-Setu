@@ -172,6 +172,9 @@ class CancelServiceRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, request_id):
+        # Log the beginning of the cancellation attempt with key info
+        logger.info(f"Cancellation attempt for ServiceRequest ID: {request_id} by User ID: {request.user.id}")
+
         try:
             with transaction.atomic():
                 service_request = ServiceRequest.objects.select_related('user', 'assigned_mechanic__user').get(id=request_id)
@@ -181,9 +184,19 @@ class CancelServiceRequestView(APIView):
                 is_mechanic = service_request.assigned_mechanic and service_request.assigned_mechanic.user == request.user
 
                 if not is_customer and not is_mechanic:
+                    # Log authorization failures
+                    logger.warning(
+                        f"Authorization failed for cancellation of ServiceRequest ID: {request_id}. "
+                        f"Attempted by User ID: {request.user.id}, but owner is User ID: {service_request.user.id}."
+                    )
                     return Response({'error': 'You are not authorized to cancel this request.'}, status=status.HTTP_403_FORBIDDEN)
 
                 if service_request.status not in ['PENDING', 'EXPIRED']:
+                    # Log failure due to invalid request status
+                    logger.warning(
+                        f"Cancellation failed for ServiceRequest ID: {request_id} due to invalid status '{service_request.status}'. "
+                        f"Attempted by User ID: {request.user.id}."
+                    )
                     return Response({'error': 'This request cannot be cancelled at its current stage.'}, status=status.HTTP_400_BAD_REQUEST)
                 
                 original_customer_id = service_request.user.id
@@ -194,8 +207,10 @@ class CancelServiceRequestView(APIView):
                 service_request.save()
 
                 channel_layer = get_channel_layer()
+                canceller_role = "Unknown"
 
                 if is_mechanic:
+                    canceller_role = "Mechanic"
                     mechanic_profile = service_request.assigned_mechanic
                     mechanic_profile.status = 'ONLINE'
                     mechanic_profile.save()
@@ -207,33 +222,43 @@ class CancelServiceRequestView(APIView):
                     
                     async_to_sync(channel_layer.group_send)(
                         target_room,
-                        {
-                            'type': 'job_cancelled_notification',
-                            'job_id': service_request.id,
-                            'message': message
-                        }
+                        {'type': 'job_cancelled_notification', 'job_id': service_request.id, 'message': message}
                     )
 
-                elif is_customer and original_mechanic_id:
-                    target_room = f'user_{original_mechanic_id}'
-                    message = f"The customer has cancelled job request {service_request.id}."
-                    if cancellation_reason:
-                        message += f" Reason: {cancellation_reason}"
+                elif is_customer:
+                    canceller_role = "Customer"
+                    if original_mechanic_id:
+                        target_room = f'user_{original_mechanic_id}'
+                        message = f"The customer has cancelled job request {service_request.id}."
+                        if cancellation_reason:
+                            message += f" Reason: {cancellation_reason}"
 
-                    async_to_sync(channel_layer.group_send)(
-                        target_room,
-                        {
-                            'type': 'job_cancelled_notification',
-                            'job_id': service_request.id,
-                            'message': message
-                        }
-                    )
+                        async_to_sync(channel_layer.group_send)(
+                            target_room,
+                            {'type': 'job_cancelled_notification', 'job_id': service_request.id, 'message': message}
+                        )
+                
+                # Log the successful cancellation
+                logger.info(
+                    f"ServiceRequest ID: {request_id} successfully CANCELLED by {canceller_role} (User ID: {request.user.id}). "
+                    f"Reason: '{cancellation_reason or 'No reason provided'}'"
+                )
 
                 return Response({'message': 'The service request has been successfully cancelled.'}, status=status.HTTP_200_OK)
+
         except ServiceRequest.DoesNotExist:
+            # Log when the requested object is not found (404)
+            logger.warning(f"ServiceRequest with ID: {request_id} not found. Request from User ID: {request.user.id}.")
             return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-
+        
+        except Exception as e:
+            # Log any other unexpected errors that occur
+            logger.error(
+                f"An unexpected error occurred while cancelling ServiceRequest ID: {request_id}. "
+                f"User: {request.user.id}. Error: {e}",
+                exc_info=True  # This adds the full exception traceback to the log
+            )
+            return Response({'error': 'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class CompleteServiceRequestView(APIView):
     permission_classes = [IsAuthenticated]
