@@ -120,6 +120,27 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             logger.error(f"[WS-RECEIVE] Error processing received message: {e}", exc_info=True)
 
     # --- Handlers for Server-Side Group Events ---
+    async def no_mechanic_found(self, event):
+        """
+        Receives the 'no_mechanic_found' event from the backend task
+        and forwards it to the connected client (frontend).
+        
+        The 'event' dictionary contains the data sent from the backend:
+        {
+            'type': 'no_mechanic_found',
+            'message': 'We are sorry, but we could not find...',
+            'job_id': '...'
+        }
+        """
+        print(f"Received 'no_mechanic_found' for user {self.user.id}, job {event.get('job_id')}")
+        
+        # Send the message payload directly to the WebSocket client (frontend).
+        await self.send(text_data=json.dumps({
+            'type': 'job_expire', # A generic type for the frontend to handle
+            'status': 'no_mechanic_found',
+            'message': event['message'],
+            'job_id': event['job_id']
+        }))
 
     async def new_job(self, event):
         """
