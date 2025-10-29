@@ -136,8 +136,7 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         
         # Send the message payload directly to the WebSocket client (frontend).
         await self.send(text_data=json.dumps({
-            'type': 'job_expire', # A generic type for the frontend to handle
-            'status': 'no_mechanic_found',
+            'type': 'no_mechanic_found', 
             'message': event['message'],
             'job_id': event['job_id']
         }))
