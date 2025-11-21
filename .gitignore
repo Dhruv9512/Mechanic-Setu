@@ -1,2 +1,21 @@
-.env
+# Virtual Environment
+.venv
 /MechanicSetuEnv/
+venv/
+env/
+
+# Environment Variables/Secrets
+.env
+.env.*
+
+# Byte-code and C-Extensions
+*.pyc
+__pycache__/
+
+# Logs and Data
+*.log
+*.sqlite3
+
+# OS/Editor Files
+.DS_Store
+Thumbs.db
