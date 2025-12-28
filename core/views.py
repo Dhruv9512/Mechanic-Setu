@@ -202,11 +202,10 @@ class MapAdViewSet(viewsets.ModelViewSet):
         return [permissions.IsAdminUser()]
 
     def perform_create(self, serializer):
-        # Even admins are "users", so we still attach the account creating it
-        serializer.save(user=self.request.user)
+        serializer.save()
 
     def perform_update(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()
 
     def perform_destroy(self, instance):
         instance.delete()
