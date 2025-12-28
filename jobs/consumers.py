@@ -226,6 +226,22 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
             'message': message
         }))
 
+    async def mechanic_arrived_notification(self, event):
+        """
+        Handles the 'mechanic_arrived_notification' event.
+        Informs the user that the mechanic has arrived.
+        """
+        job_id = event.get('job_id')
+        price = event.get('price')
+        message = event.get('message')
+        logger.info(f"[HANDLER] 'mechanic_arrived_notification' triggered for user {self.user_id} regarding job {job_id}.")
+
+        await self.send(text_data=json.dumps({
+            'type': 'mechanic_arrived', 
+            'job_id': job_id,
+            'price': price,
+            'message': message
+        }))
 
     async def job_completed_notification(self, event):
         """

@@ -2,8 +2,9 @@ from django.utils.timezone import now
 from django.contrib.auth import get_user_model
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status,viewsets,permissions
 from rest_framework.permissions import AllowAny, IsAuthenticated
+
 
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
@@ -14,6 +15,10 @@ from django.core.management import call_command
 from django.db import connections, transaction
 import logging
 from datetime import timedelta
+from .models import MapAd
+from .serializers import MapAdSerializer
+
+
 logger = logging.getLogger(__name__)
 
 # -------------------------
@@ -180,3 +185,28 @@ class GetWsTokenView(APIView):
         except Exception as e:
             logger.error(f"Error generating WebSocket token: {e}", exc_info=True)
             return Response({"error": "Failed to generate WebSocket token"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MapAdViewSet(viewsets.ModelViewSet):
+    queryset = MapAd.objects.all()
+    serializer_class = MapAdSerializer
+    authentication_classes = [CookieJWTAuthentication]
+
+    def get_permissions(self):
+        """
+        - GET (Safe methods): Public (AllowAny)
+        - POST, PUT, DELETE: Admin Only (IsAdminUser)
+        """
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAdminUser()]
+
+    def perform_create(self, serializer):
+        # Even admins are "users", so we still attach the account creating it
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_destroy(self, instance):
+        instance.delete()

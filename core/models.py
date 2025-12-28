@@ -13,3 +13,23 @@ class DatabaseCache(models.Model):
 
     def __str__(self):
         return self.cache_key
+
+
+# Ad's to display in map
+class MapAd(models.Model):
+    business_name = models.CharField(max_length=255)
+    logo_url = models.URLField(max_length=500)
+    link_url = models.URLField(max_length=500)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    description = models.CharField(max_length=255)
+    offer_title = models.CharField(max_length=100)
+    offer_subtitle = models.CharField(max_length=255)
+    offer_price = models.CharField(max_length=100)  # CharField because input is "just ₹5000/- only"
+    
+    bg_gradient = models.JSONField(default=list) 
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.business_name

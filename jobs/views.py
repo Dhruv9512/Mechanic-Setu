@@ -260,6 +260,49 @@ class CancelServiceRequestView(APIView):
             )
             return Response({'error': 'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class MechanicArrivedView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, request_id):
+        try:
+            with transaction.atomic():
+                service_request = ServiceRequest.objects.select_related('user', 'assigned_mechanic__user').get(id=request_id)
+
+                # Authorization: Only the assigned mechanic
+                if not (service_request.assigned_mechanic and service_request.assigned_mechanic.user == request.user):
+                    return Response({'error': 'You are not authorized to update this request.'}, status=status.HTTP_403_FORBIDDEN)
+
+                # State Check: Must be ACCEPTED to move to ARRIVED
+                if service_request.status != 'ACCEPTED':
+                    return Response({'error': 'Request must be accepted before marking as arrived.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Get and Set Price
+                try:
+                    price = float(request.data.get('price'))
+                except (TypeError, ValueError):
+                    return Response({"error": "Invalid price provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+                service_request.status = 'ARRIVED'
+                service_request.price = price
+                service_request.save()
+
+                # Notify the Customer
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{service_request.user.id}",
+                    {
+                        'type': 'mechanic_arrived_notification',
+                        'job_id': service_request.id,
+                        'price': price,
+                        'message': f"Mechanic has arrived. Estimated price: {price}"
+                    }
+                )
+
+                return Response({'message': 'Status updated to Arrived and price set.'}, status=status.HTTP_200_OK)
+
+        except ServiceRequest.DoesNotExist:
+            return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
 class CompleteServiceRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -268,24 +311,16 @@ class CompleteServiceRequestView(APIView):
             with transaction.atomic():
                 service_request = ServiceRequest.objects.select_related('user', 'assigned_mechanic__user').get(id=request_id)
 
-                # Authorization check: Only the assigned mechanic can complete the job.
                 if not (service_request.assigned_mechanic and service_request.assigned_mechanic.user == request.user):
                     return Response({'error': 'You are not authorized to complete this request.'}, status=status.HTTP_403_FORBIDDEN)
 
-                # Status validation: The job must be in 'ACCEPTED' state to be completed.
-                if service_request.status != 'ACCEPTED':
-                    return Response({'error': 'This request cannot be completed at its current stage.'}, status=status.HTTP_400_BAD_REQUEST)
+                # Updated Check: Status must be ARRIVED (since price is set there)
+                if service_request.status != 'ARRIVED':
+                    return Response({'error': 'You must mark as Arrived and set price before completing.'}, status=status.HTTP_400_BAD_REQUEST)
 
-                 # Get the price from the request data
-                try:
-                    price = float(request.data.get('price'))
-                except (TypeError, ValueError):
-                    return Response({"error": "Invalid price provided."}, status=status.HTTP_400_BAD_REQUEST)
-
-
-                # Update service request
+                # Note: Price is already set in Arrived view, so we just update status here.
+                
                 service_request.status = 'COMPLETED'
-                service_request.price = price
                 service_request.save()
 
                 # Update mechanic's status to ONLINE
@@ -293,14 +328,14 @@ class CompleteServiceRequestView(APIView):
                 mechanic_profile.status = 'ONLINE'
                 mechanic_profile.save()
 
-                # Broadcast notification to the customer
+                # Broadcast notification
                 channel_layer = get_channel_layer()
                 async_to_sync(channel_layer.group_send)(
                     f"user_{service_request.user.id}",
                     {
                         'type': 'job_completed_notification',
                         'job_id': service_request.id,
-                        'message': f"Your service request {service_request.id} has been completed by the mechanic."
+                        'message': f"Your service request {service_request.id} has been completed."
                     }
                 )
 
@@ -308,15 +343,7 @@ class CompleteServiceRequestView(APIView):
         except ServiceRequest.DoesNotExist:
             return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-
-
-
-
 class SyncActiveJobView(APIView):
-    """
-    Checks for and returns the currently active job for a user upon reconnection.
-    This allows the frontend to sync its state.
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -326,40 +353,41 @@ class SyncActiveJobView(APIView):
 
         try:
             mechanic_profile = user.mechanic_profile
+            # Update: Include 'ARRIVED' in active status for mechanic
             active_request = ServiceRequest.objects.filter(
                 assigned_mechanic=mechanic_profile,
-                status='ACCEPTED'
+                status__in=['ACCEPTED', 'ARRIVED'] 
             ).select_related('user', 'assigned_mechanic__user').first()
             is_mechanic_user = True
         except Mechanic.DoesNotExist:
+            # Update: Include 'ARRIVED' in active status for customer
             active_request = ServiceRequest.objects.filter(
                 user=user,
-                status__in=['PENDING', 'ACCEPTED']
+                status__in=['PENDING', 'ACCEPTED', 'ARRIVED']
             ).select_related('user', 'assigned_mechanic__user').first()
 
         if active_request:
-            # --- MODIFICATION: Manually build the response based on user role ---
             if is_mechanic_user:
-                # This is a mechanic, send them the job and customer details
-                serializer=JobDetailsForMechanicSerializer(active_request)
-                job_details =serializer.data
+                serializer = JobDetailsForMechanicSerializer(active_request)
+                job_details = serializer.data
                 return Response(job_details, status=status.HTTP_200_OK)
             else:
-                # This is a customer, send them the mechanic's details
                 if active_request.assigned_mechanic:
                     mechanic_profile = active_request.assigned_mechanic
                     serializer = MechanicDataForUserSerializer(mechanic_profile)
                     mechanic_data = serializer.data
+                    
+                    # Optional: Add current job status/price to response so UI knows to show "Arrived" state
+                    mechanic_data['job_status'] = active_request.status 
+                    mechanic_data['price'] = active_request.price
+
                     return Response(mechanic_data, status=status.HTTP_200_OK)
                 else:
-                    # The job is pending and has no mechanic assigned yet
                     pending_data = {
                         'job_id': active_request.id,
                         'status': 'PENDING',
                         'message': 'Waiting for a mechanic to accept your request.'
                     }
                     return Response(pending_data, status=status.HTTP_200_OK)
-                    
-                
         else:
             return Response({'message': 'No active job found.'}, status=status.HTTP_200_OK)

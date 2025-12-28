@@ -11,6 +11,7 @@ class ServiceRequest(models.Model):
         ('COMPLETED', 'Completed'),
         ('CANCELLED', 'Cancelled'),
         ('EXPIRED', 'Expired'),
+        ('ARRIVED', 'Arrived'),
     ]
 
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='service_requests')
