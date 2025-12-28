@@ -28,3 +28,6 @@ class MapAdSerializer(serializers.ModelSerializer):
             'offerPrice', 
             'bgGradient'
         ]
+    
+    def create(self, validated_data):
+        return MapAd.objects.create(**validated_data)
