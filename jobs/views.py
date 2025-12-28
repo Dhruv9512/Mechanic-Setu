@@ -276,14 +276,9 @@ class MechanicArrivedView(APIView):
                 if service_request.status != 'ACCEPTED':
                     return Response({'error': 'Request must be accepted before marking as arrived.'}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Get and Set Price
-                try:
-                    price = float(request.data.get('price'))
-                except (TypeError, ValueError):
-                    return Response({"error": "Invalid price provided."}, status=status.HTTP_400_BAD_REQUEST)
-
+                # NOTE: Price logic removed from here as per request
+                
                 service_request.status = 'ARRIVED'
-                service_request.price = price
                 service_request.save()
 
                 # Notify the Customer
@@ -293,12 +288,11 @@ class MechanicArrivedView(APIView):
                     {
                         'type': 'mechanic_arrived_notification',
                         'job_id': service_request.id,
-                        'price': price,
-                        'message': f"Mechanic has arrived. Estimated price: {price}"
+                        'message': "Mechanic has arrived."
                     }
                 )
 
-                return Response({'message': 'Status updated to Arrived and price set.'}, status=status.HTTP_200_OK)
+                return Response({'message': 'Status updated to Arrived.'}, status=status.HTTP_200_OK)
 
         except ServiceRequest.DoesNotExist:
             return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
@@ -314,12 +308,17 @@ class CompleteServiceRequestView(APIView):
                 if not (service_request.assigned_mechanic and service_request.assigned_mechanic.user == request.user):
                     return Response({'error': 'You are not authorized to complete this request.'}, status=status.HTTP_403_FORBIDDEN)
 
-                # Updated Check: Status must be ARRIVED (since price is set there)
+                # Status must be ARRIVED before completing
                 if service_request.status != 'ARRIVED':
-                    return Response({'error': 'You must mark as Arrived and set price before completing.'}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({'error': 'You must mark as Arrived before completing.'}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Note: Price is already set in Arrived view, so we just update status here.
+                # Get and Set Price here (Moved from Arrived view)
+                try:
+                    price = float(request.data.get('price'))
+                except (TypeError, ValueError):
+                    return Response({"error": "Invalid price provided. Price is required to complete the job."}, status=status.HTTP_400_BAD_REQUEST)
                 
+                service_request.price = price
                 service_request.status = 'COMPLETED'
                 service_request.save()
 
@@ -335,14 +334,15 @@ class CompleteServiceRequestView(APIView):
                     {
                         'type': 'job_completed_notification',
                         'job_id': service_request.id,
-                        'message': f"Your service request {service_request.id} has been completed."
+                        'price': price,
+                        'message': f"Your service request {service_request.id} has been completed. Total Amount: {price}"
                     }
                 )
 
-                return Response({'message': 'Job has been marked as completed.'}, status=status.HTTP_200_OK)
+                return Response({'message': 'Job has been marked as completed and price updated.'}, status=status.HTTP_200_OK)
         except ServiceRequest.DoesNotExist:
             return Response({'error': 'Service request not found.'}, status=status.HTTP_404_NOT_FOUND)
-
+        
 class SyncActiveJobView(APIView):
     permission_classes = [IsAuthenticated]
 
