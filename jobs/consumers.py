@@ -19,7 +19,7 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
     """
 
     # --- Connection Management ---
-
+    
     async def connect(self):
         """
         Handles an incoming WebSocket connection.
@@ -267,7 +267,8 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         latitude = data.get('latitude')
         longitude = data.get('longitude')
         job_id = data.get('job_id') # Will be None if not sent by client
-
+        
+        logger.info(f"Location update from Machanic {self.user_id}: lat={latitude}, lon={longitude}, job_id={job_id}")
         # This check handles the case where job_id is missing.
         if not all([latitude, longitude]):
             logger.warning(f"Incomplete location data from user {self.user_id}.")
@@ -275,7 +276,8 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
 
         # 1. Always update the mechanic's location in the database.
         await self.update_mechanic_location(self.user_id, latitude, longitude)
-
+        
+        logger.debug(f"Mechanic {self.user_id} location updated in DB: lat={latitude}, lon={longitude}.")
         # 2. Only proceed to send a notification if there is a job_id.
         if not job_id:
             logger.info(f"Mechanic {self.user_id} has no active job. DB location updated.")
@@ -284,13 +286,15 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         # 3. Check the mechanic's status.
         mechanic_is_working = await self.is_mechanic_working(self.user_id)
 
+        logger.info(f"Mechanic {self.user_id} is {'working' if mechanic_is_working else 'not working'}.")
         # 4. If they are working, send the notification.
         if mechanic_is_working:
+
             customer_id = await self.get_customer_id_for_job(job_id, self.user)
             await self.update_service_request_timestamp(job_id)
             if customer_id:
                 target_room = f'user_{customer_id}'
-                
+                logger.info(f"Sending mechanic location update to customer {customer_id} for job {job_id}.")
                 # This line will NOT cause an error if the customer is offline.
                 await self.channel_layer.group_send(
                     target_room,
@@ -299,6 +303,7 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
                         'latitude': latitude,
                         'longitude': longitude,
                         'mechanic_id': self.user_id,
+                        'job_id': job_id
                     }
                 )
     async def handle_user_heartbeat(self, data):
