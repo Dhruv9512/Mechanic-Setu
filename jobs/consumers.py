@@ -321,9 +321,9 @@ class JobNotificationConsumer(AsyncWebsocketConsumer):
         Securely retrieves the customer's user ID for a given job.
         """
         try:
-            job = ServiceRequest.objects.select_related('user', 'mechanic__user').get(
+            job = ServiceRequest.objects.select_related('user', 'assigned_mechanic__user').get(
                 id=job_id, 
-                mechanic__user=mechanic_user
+                assigned_mechanic__user=mechanic_user 
             )
             return job.user.id
         except ServiceRequest.DoesNotExist:
