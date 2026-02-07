@@ -6,7 +6,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # Install system dependencies
-# This is the updated list for your project's needs.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # For compiling Python packages if needed (like brotli, zopfli)
     build-essential \
