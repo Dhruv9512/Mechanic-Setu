@@ -111,9 +111,9 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 SIMPLE_JWT = {
-    'SIGNING_KEY': base64.b64decode(os.environ.get('PRIVATE_SIGNING_KEY')).decode('utf-8'),
-    'ALGORITHM': 'RS256',
-    'VERIFYING_KEY': base64.b64decode(os.environ.get('PUBLIC_SIGNING_KEY')).decode('utf-8'),
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': os.environ.get('SIGNING_KEY'),
+    'VERIFYING_KEY': None,
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),      
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),        
     'ROTATE_REFRESH_TOKENS': True,                       
