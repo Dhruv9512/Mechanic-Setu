@@ -102,6 +102,8 @@ class CreateServiceRequestView(APIView):
             vehical_type = request.data.get('vehical_type', '')
             problem = request.data.get('problem', '')
             additional_details = request.data.get('additional_details', '')
+            vehical_details = request.data.get('vehical_details', '')
+            
         except (TypeError, ValueError):
             return Response({"error": "Invalid data provided for the service request."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -113,7 +115,8 @@ class CreateServiceRequestView(APIView):
             vehical_type=vehical_type,
             problem=problem,
             additional_details=additional_details,
-            status='PENDING'
+            status='PENDING',
+            vehical_details=vehical_details
         )
 
         # Start a new thread to run the task

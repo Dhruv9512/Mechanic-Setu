@@ -34,7 +34,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = ["mechanic-setu-backend.vercel.com","mechanic-setu.onrender.com","mechanicsetu.netlify.app","localhost", "172.20.10.4","127.0.0.1","setu-partner.netlify.app", "localhost:8000"]
+ALLOWED_HOSTS = ["mechanic-setu-backend.vercel.com","mechanic-setu.onrender.com","mechanicsetu.netlify.app","localhost", "172.20.10.4","127.0.0.1","setu-partner.netlify.app", "localhost:8000", "mechanic-setu-int0.onrender.com"]
 
 
 # Application definition
@@ -203,13 +203,13 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # ----------------------
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="https://mechanic-setu-backend.vercel.com,https://mechanicsetu.netlify.app,https://mechanic-setu.onrender.com,http://172.20.10.4:5173,http://localhost:5173,https://setu-partner.netlify.app,http://localhost:8000",
+    default="https://mechanic-setu-backend.vercel.com,https://mechanicsetu.netlify.app,https://mechanic-setu.onrender.com,http://172.20.10.4:5173,http://localhost:5173,https://setu-partner.netlify.app,http://localhost:8000,https://mechanic-setu-int0.onrender.com",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="https://mechanic-setu-backend.vercel.com,https://mechanicsetu.netlify.app,http://172.20.10.4:5173,http://localhost:5173,https://mechanic-setu.onrender.com,https://setu-partner.netlify.app,http://localhost:8000",
+    default="https://mechanic-setu-backend.vercel.com,https://mechanicsetu.netlify.app,http://172.20.10.4:5173,http://localhost:5173,https://mechanic-setu.onrender.com,https://setu-partner.netlify.app,http://localhost:8000,https://mechanic-setu-int0.onrender.com",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 

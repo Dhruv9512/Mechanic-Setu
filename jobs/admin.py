@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ServiceRequest
+from .models import ServiceRequest,VehicleRCInfo, UserVehicle
 
 @admin.register(ServiceRequest)
 class ServiceRequestAdmin(admin.ModelAdmin):
@@ -17,7 +17,8 @@ class ServiceRequestAdmin(admin.ModelAdmin):
         'price',
         'created_at',
         'updated_at',
-        'cancellation_reason'
+        'cancellation_reason',
+        'vehical_details'
     )
     
     # Filters available on the right sidebar
@@ -59,3 +60,59 @@ class ServiceRequestAdmin(admin.ModelAdmin):
 
     # Make foreign key fields searchable with a dropdown/search box
     raw_id_fields = ('user', 'assigned_mechanic')
+
+@admin.register(VehicleRCInfo)
+class VehicleRCInfoAdmin(admin.ModelAdmin):
+    """
+    Manages the master database of vehicle registration details.
+    """
+    list_display = (
+        'vehicle_id', 
+        'license_plate', 
+        'owner_name', 
+        'brand_name', 
+        'brand_model', 
+        'rc_status', 
+        'created_at'
+    )
+    list_filter = ('rc_status', 'fuel_type', 'vehicle_category', 'is_financed')
+    search_fields = ('vehicle_id', 'license_plate', 'owner_name', 'chassis_number')
+    readonly_fields = ('created_at', 'updated_at', 'last_synced_at', 'raw_response')
+    
+    fieldsets = (
+        ('Identification', {
+            'fields': ('vehicle_id', 'license_plate', 'chassis_number', 'engine_number')
+        }),
+        ('Technical Details', {
+            'fields': (
+                'brand_name', 'brand_model', 'vehicle_category', 'vehicle_class',
+                'fuel_type', 'color', 'cubic_capacity', 'cylinders', 'norms'
+            )
+        }),
+        ('Ownership & Registration', {
+            'fields': (
+                'owner_name', 'father_name', 'owner_count', 
+                'registration_date', 'rc_status', 'vehicle_age'
+            )
+        }),
+        ('Address Information', {
+            'fields': ('present_address', 'permanent_address')
+        }),
+        ('Financials', {
+            'fields': ('is_financed', 'financer', 'noc_details')
+        }),
+        ('Metadata', {
+            'classes': ('collapse',),
+            'fields': ('source', 'raw_response', 'created_at', 'updated_at', 'last_synced_at')
+        }),
+    )
+
+@admin.register(UserVehicle)
+class UserVehicleAdmin(admin.ModelAdmin):
+    """
+    Tracks which users have saved which vehicles for quick access or notifications.
+    """
+    list_display = ('user', 'vehicle', 'is_owner', 'notification_enabled', 'created_at')
+    list_filter = ('is_owner', 'notification_enabled')
+    search_fields = ('user__email', 'user__mobile_number', 'vehicle__vehicle_id')
+    raw_id_fields = ('user', 'vehicle')
