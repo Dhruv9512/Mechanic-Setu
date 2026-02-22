@@ -3,7 +3,7 @@
 import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
+from core.middleware import JWTAuthHeaderMiddleware
 import django
 
 # Set the settings module environment variable
@@ -17,7 +17,7 @@ import jobs.routing
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),  # Use the initialized app for HTTP
-    "websocket": AuthMiddlewareStack(
+    "websocket": JWTAuthHeaderMiddleware(
         URLRouter(
             jobs.routing.websocket_urlpatterns
         )
