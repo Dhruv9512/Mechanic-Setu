@@ -1,22 +1,21 @@
-# In MechanicSetu/asgi.py
-
 import os
-from django.core.asgi import get_asgi_application
-from channels.routing import ProtocolTypeRouter, URLRouter
-from core.middleware import JWTAuthHeaderMiddleware
 import django
+from django.core.asgi import get_asgi_application
 
-# Set the settings module environment variable
+# 1. Set the environment variable first
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'MechanicSetu.settings')
 
-
+# 2. Call django.setup() BEFORE importing anything else related to Django
 django.setup()
 
-# Import your routing module AFTER Django is initialized
+# 3. NOW it is safe to import Channels, routing, and your middleware
+from channels.routing import ProtocolTypeRouter, URLRouter
 import jobs.routing
+from core.middleware import JWTAuthHeaderMiddleware
 
+# 4. Define your application
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),  # Use the initialized app for HTTP
+    "http": get_asgi_application(), 
     "websocket": JWTAuthHeaderMiddleware(
         URLRouter(
             jobs.routing.websocket_urlpatterns
