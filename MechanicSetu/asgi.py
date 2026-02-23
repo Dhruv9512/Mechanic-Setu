@@ -11,12 +11,12 @@ django.setup()
 # 3. NOW it is safe to import Channels, routing, and your middleware
 from channels.routing import ProtocolTypeRouter, URLRouter
 import jobs.routing
-from core.middleware import JWTAuthHeaderMiddleware
+from channels.auth import AuthMiddlewareStack
 
 # 4. Define your application
 application = ProtocolTypeRouter({
     "http": get_asgi_application(), 
-    "websocket": JWTAuthHeaderMiddleware(
+    "websocket": AuthMiddlewareStack(
         URLRouter(
             jobs.routing.websocket_urlpatterns
         )
