@@ -252,7 +252,7 @@ LOGGING = {
 # ----------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'core.authentication.CookieJWTAuthentication',
+        'core.authentication.HeaderJWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',

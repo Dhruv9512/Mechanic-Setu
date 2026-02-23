@@ -27,7 +27,30 @@ class CookieJWTAuthentication(JWTAuthentication):
 
         return (user, validated_token)
 
+class HeaderJWTAuthentication(JWTAuthentication):
+    def authenticate(self, request):
+        header = request.headers.get("Authorization")
 
+        if header is None:
+            return None
+
+        if not header.startswith("Bearer "):
+            raise AuthenticationFailed("Invalid Authorization header format")
+
+        raw_token = header.split(" ")[1]
+
+        try:
+            validated_token = self.get_validated_token(raw_token)
+        except Exception as e:
+            raise AuthenticationFailed("Token Validation Error: " + str(e))
+
+        try:
+            user = self.get_user(validated_token)
+        except Exception as e:
+            raise AuthenticationFailed("User Retrieval Error: " + str(e))
+
+        return (user, validated_token)
+    
 def generate_otp():
     """
     Generate a random 6-digit OTP as a string.
